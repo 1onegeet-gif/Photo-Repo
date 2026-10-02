@@ -75,10 +75,6 @@ export function useKeyboardShortcuts() {
           e.preventDefault();
           s.setShowOriginal(!s.showOriginal);
           break;
-        case "r":
-          e.preventDefault();
-          s.reseed();
-          break;
         case "u":
           e.preventDefault();
           if (e.shiftKey) s.redo();
@@ -114,6 +110,27 @@ export function useKeyboardShortcuts() {
         case "t":
           e.preventDefault();
           s.rotate90();
+          break;
+        case "e": {
+          e.preventDefault();
+          const exportEl = document.getElementById("export");
+          if (exportEl) exportEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          break;
+        }
+        case "g": {
+          e.preventDefault();
+          const galEl = document.getElementById("randomize");
+          if (galEl) galEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          break;
+        }
+        case "r":
+          if (e.shiftKey) {
+            e.preventDefault();
+            s.resetAll();
+          } else {
+            e.preventDefault();
+            s.reseed();
+          }
           break;
       }
     };

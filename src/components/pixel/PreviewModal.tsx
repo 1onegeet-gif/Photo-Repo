@@ -42,14 +42,14 @@ export function PreviewModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open || !format) return null;
+  if (!open || !format || !meta) return null;
 
   const onCopy = async () => {
     let ok = false;
-    if (format === "html") ok = await copyHtml(meta!);
-    else if (format === "css") ok = await copyCss(meta!);
-    else if (format === "svg") ok = await copySvg(meta!);
-    else if (format === "json") ok = await copyJson(meta!);
+    if (format === "html") ok = await copyHtml(meta);
+    else if (format === "css") ok = await copyCss(meta);
+    else if (format === "svg") ok = await copySvg(meta);
+    else if (format === "json") ok = await copyJson(meta);
     if (ok) {
       setCopied(true);
       toast.success(`${format.toUpperCase()} copied to clipboard`);
@@ -138,18 +138,19 @@ function buildPreview(format: string, meta: ExportMeta): string {
   const bg = background ? `#${[background[0], background[1], background[2]].map((v) => (v | 0).toString(16).padStart(2, "0")).join("")}` : "transparent";
 
   if (format === "json") {
+    const shown = Math.min(8, cells.length);
     return JSON.stringify(
       {
         format: "mosaic-atelier/v1",
         width, height, shape, shapeSize,
         cellCount: cells.length,
-        cells: cells.slice(0, 8).map((c) => ({
+        cells: cells.slice(0, shown).map((c) => ({
           x: +c.x.toFixed(1), y: +c.y.toFixed(1),
           w: +c.w.toFixed(1), h: +c.h.toFixed(1),
           shape: c.shape,
           hex: `#${[c.color[0], c.color[1], c.color[2]].map((v) => (v | 0).toString(16).padStart(2, "0")).join("")}`,
         })),
-        "…": `+ ${cells.length - 8} more cells`,
+        ...(cells.length > shown ? { "…": `+ ${cells.length - shown} more cells` } : {}),
       },
       null,
       2,

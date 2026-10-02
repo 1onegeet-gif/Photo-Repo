@@ -5,7 +5,7 @@ import { PanelSection } from "./PanelSection";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ControlSlider } from "./ControlSlider";
-import { Lock, Unlock, Wand2, X, Plus, Pipette, Code2 } from "lucide-react";
+import { Lock, Unlock, Wand2, X, Plus, Pipette, Code2, Wind } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import {
@@ -15,7 +15,7 @@ import {
   hexToRgb,
   RGB,
 } from "@/lib/color";
-import { copyPaletteCssVars } from "@/lib/export";
+import { copyPaletteCssVars, copyPaletteTailwind } from "@/lib/export";
 
 interface PaletteLockPanelProps {
   sourceRef: React.RefObject<HTMLCanvasElement | null>;
@@ -209,20 +209,35 @@ export function PaletteLockPanel({ sourceRef }: PaletteLockPanelProps) {
               </button>
             ))}
           </div>
-          {/* Copy as CSS variables */}
-          <button
-            type="button"
-            onClick={async () => {
-              const ok = await copyPaletteCssVars(s.palette!.colors);
-              if (ok) toast.success("Palette copied as CSS variables");
-              else toast.error("Clipboard not available");
-            }}
-            className="copy-css-vars-btn flex w-full items-center justify-center gap-1.5 rounded-md border border-border/60 bg-paper/50 px-2 py-1.5 text-[10px] text-foreground/70 transition-colors hover:bg-paper hover:text-foreground"
-            title="Copy as :root { --mosaic-1: #...; } CSS custom properties"
-          >
-            <Code2 className="h-3 w-3 text-matcha" />
-            Copy as CSS variables
-          </button>
+          {/* Copy buttons — CSS vars + Tailwind config */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                const ok = await copyPaletteCssVars(s.palette!.colors);
+                if (ok) toast.success("Copied as CSS variables");
+                else toast.error("Clipboard not available");
+              }}
+              className="copy-css-vars-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border/60 bg-paper/50 px-2 py-1.5 text-[10px] text-foreground/70 transition-colors hover:bg-paper hover:text-foreground"
+              title="Copy as :root { --mosaic-1: #...; } CSS custom properties"
+            >
+              <Code2 className="h-3 w-3 text-matcha" />
+              CSS vars
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const ok = await copyPaletteTailwind(s.palette!.colors);
+                if (ok) toast.success("Copied as Tailwind config");
+                else toast.error("Clipboard not available");
+              }}
+              className="copy-css-vars-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border/60 bg-paper/50 px-2 py-1.5 text-[10px] text-foreground/70 transition-colors hover:bg-paper hover:text-foreground"
+              title="Copy as Tailwind config colors extension"
+            >
+              <Wind className="h-3 w-3 text-seal" />
+              Tailwind
+            </button>
+          </div>
         </div>
       )}
     </PanelSection>

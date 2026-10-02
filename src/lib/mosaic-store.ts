@@ -101,6 +101,8 @@ export interface MosaicState extends ParamSnapshot {
   resetTransform: () => void;
   // Help
   setHelpOpen: (v: boolean) => void;
+  // Reset everything to defaults
+  resetAll: () => void;
 }
 
 const INITIAL: ParamSnapshot = {
@@ -302,4 +304,23 @@ export const useMosaic = create<MosaicState>((set, get) => ({
     })),
   resetTransform: () => set({ transform: { flipH: false, flipV: false, rotate90: 0 } }),
   setHelpOpen: (v) => set({ helpOpen: v }),
+  resetAll: () =>
+    set((s) => ({
+      ...INITIAL,
+      hasImage: s.hasImage,
+      sourceWidth: s.sourceWidth,
+      sourceHeight: s.sourceHeight,
+      fileName: s.fileName,
+      transform: { flipH: false, flipV: false, rotate90: 0 },
+      showOriginal: false,
+      showFocal: false,
+      compareMode: false,
+      splitPos: 0.5,
+      inspectMode: false,
+      sourcePickMode: false,
+      helpOpen: false,
+      // Clear history when resetting
+      past: [],
+      future: [],
+    })),
 }));

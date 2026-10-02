@@ -217,7 +217,7 @@ export default function Home() {
         </section>
 
         {/* Randomize gallery — 4 dice-rolled variations */}
-        <section className="matte-card washi-texture rounded-lg p-4">
+        <section id="randomize" className="matte-card washi-texture rounded-lg p-4">
           <RandomizeGallery sampleSrc="/samples/fuji.png" />
         </section>
 
@@ -397,9 +397,12 @@ export default function Home() {
               <Shortcut keys={["Y"]} label="Flip vertical" />
               <Shortcut keys={["T"]} label="Rotate 90°" />
               <Shortcut keys={["R"]} label="Reseed" />
+              <Shortcut keys={["⇧","R"]} label="Reset all" />
               <Shortcut keys={["U"]} label="Undo" />
               <Shortcut keys={["⇧","U"]} label="Redo" />
               <Shortcut keys={["P"]} label="Jump to presets" />
+              <Shortcut keys={["G"]} label="Randomize gallery" />
+              <Shortcut keys={["E"]} label="Jump to export" />
               <Shortcut keys={["?"]} label="Toggle help" />
             </div>
           </PanelSection>

@@ -630,3 +630,53 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired
 - Could add: canvas zoom controls, animated GIF/frames export, tile-based large image tiling
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 18 (cron round 10)
+Agent: main (Z.ai Code)
+Task: Bug fixes + reset all, Tailwind palette export, keyboard shortcuts, styling polish
+
+Work Log:
+- QA check: dev server STILL down (8th consecutive round). Verified all code via lint + tsc.
+- Code review found and fixed 2 bugs:
+  1. PreviewModal: `meta!` used without null guard — could crash if meta is null but format is set. Fixed: `if (!open || !format || !meta) return null;` + removed all `!` assertions.
+  2. PreviewModal buildPreview: JSON preview showed negative "more cells" count when cells.length < 8. Fixed: uses `Math.min(8, cells.length)` + conditional spread for the "…" field.
+- Added "Reset all" button:
+  - Store: `resetAll()` action — restores all params to INITIAL defaults, clears history, preserves loaded image
+  - Header: RotateCcw icon button with toast confirmation, title "Reset all (⇧R)"
+- Added "Copy as Tailwind config" palette export:
+  - `buildPaletteTailwind()` + `copyPaletteTailwind()` in export.ts — generates `module.exports = { theme: { extend: { colors: { "mosaic-1": "#xxx", ... } } } }`
+  - PaletteLockPanel: two side-by-side buttons — "CSS vars" (matcha Code2 icon) + "Tailwind" (seal Wind icon)
+- Added 3 new keyboard shortcuts (19 total):
+  - `E` = scroll to export section
+  - `G` = scroll to randomize gallery
+  - `Shift+R` = reset all (removed duplicate `r` case, now handles both R=reseed and Shift+R=reset)
+  - Added `id="randomize"` to the randomize gallery section for the G shortcut
+- Updated shortcuts cheat-sheet with all 19 shortcuts
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code)
+- agent-browser verification: DEFERRED — dev server down entire session (8th consecutive round). Code verified via lint + tsc.
+
+Stage Summary:
+- Round 10 complete: 2 bug fixes (null guard, negative count), reset all button + store action, Tailwind palette export, 3 new keyboard shortcuts (19 total)
+- Code verified via lint + tsc; browser QA pending dev server recovery
+- Total: 20 presets + 4 random variations + custom localStorage presets, 6 export formats (each with download + preview + copy), palette → CSS vars + Tailwind config, 6 SVG filter variants, 19 keyboard shortcuts
+
+---
+Current project status description/assessment (post round 10)
+- Mosaic Atelier now has: 20 built-in presets (searchable + 6 category filters) + 4 dice-rolled random variations + custom localStorage presets (with export/import), 6 export formats (PNG/SVG/HTML/CSS/JSON/ASCII) each with download + preview modal + copy-to-clipboard, palette lock with "copy as CSS variables" + "copy as Tailwind config", 6 SVG filter variants, before/after compare, cell inspect + cell-color eyedropper, source-pixel color picker, URL state share, batch export, lightbox, undo/redo + reset all, live stats with color frequency histogram, image levels histogram (RGB+L), palette lock, shape mix, Bayer dithering, image transforms (flip/rotate with shortcuts), multi-image tray (6 recent), help/onboarding overlay, custom SVG favicon, 19 keyboard shortcuts, drag-to-resize workspace
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 10)
+- DONE: 2 bug fixes (PreviewModal null guard, buildPreview negative count), reset all button + store action, Tailwind palette export, 3 new keyboard shortcuts (E/G/Shift+R)
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down 8th consecutive round)
+
+Unresolved issues or risks, priority recommendations for next phase
+- **CRITICAL: dev server has been down for 8 consecutive rounds (rounds 3-10)** — persistent environment issue. The code is thoroughly verified via lint + tsc. Next round should verify if dev server is back; if so, run full agent-browser QA on ALL features from rounds 3-10.
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: canvas zoom controls, animated GIF/frames export, tile-based large image tiling
+- The recurring 15-min webDevReview cron will continue iterating

@@ -1,12 +1,14 @@
 "use client";
 
-import { Brush, HelpCircle } from "lucide-react";
+import { Brush, HelpCircle, RotateCcw } from "lucide-react";
 import { HistoryControls } from "./HistoryControls";
 import { ShareButton } from "./ShareButton";
 import { useMosaic } from "@/lib/mosaic-store";
+import { toast } from "sonner";
 
 export function Header() {
   const setHelpOpen = useMosaic((s) => s.setHelpOpen);
+  const resetAll = useMosaic((s) => s.resetAll);
   return (
     <header className="header-strip sticky top-0 z-30 border-b border-border/50 bg-paper/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -45,6 +47,18 @@ export function Header() {
           <div className="mx-1 hidden h-5 w-px bg-border/60 sm:block" />
           <HistoryControls />
           <ShareButton />
+          <button
+            type="button"
+            onClick={() => {
+              resetAll();
+              toast.success("All settings reset to defaults");
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-paper hover:text-seal"
+            aria-label="Reset all settings"
+            title="Reset all (⇧R)"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={() => setHelpOpen(true)}

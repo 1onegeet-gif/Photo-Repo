@@ -81,6 +81,26 @@ export async function copyPaletteCssVars(colors: RGB[], prefix?: string): Promis
   return copyToClipboard(buildPaletteCssVars(colors, prefix));
 }
 
+/** Build a Tailwind config color extension string from a palette. */
+export function buildPaletteTailwind(colors: RGB[], prefix = "mosaic"): string {
+  const lines = colors.map((c, i) => `        "${prefix}-${i + 1}": "${rgbToHex(c)}",`);
+  return `// tailwind.config.js — Mosaic Atelier palette
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+${lines.join("\n").replace(/,\n$/, "\n")}
+      },
+    },
+  },
+};`;
+}
+
+/** Copy a palette as a Tailwind config snippet. Returns success. */
+export async function copyPaletteTailwind(colors: RGB[], prefix?: string): Promise<boolean> {
+  return copyToClipboard(buildPaletteTailwind(colors, prefix));
+}
+
 /** Build the HTML export string (shared between download + clipboard). */
 function buildHtmlString(meta: ExportMeta): string {
   const { width, height, cells, background, shape, shapeSize } = meta;
