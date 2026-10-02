@@ -194,6 +194,11 @@ export default function Home() {
           </aside>
         </section>
 
+        {/* Kanji divider */}
+        <div className="kanji-divider">
+          <span>書き出し · EXPORT</span>
+        </div>
+
         {/* Export */}
         <section id="export" className="matte-card washi-texture relative rounded-lg p-4">
           <span className="seigaiha-corner tr" aria-hidden />
@@ -211,6 +216,11 @@ export default function Home() {
             </p>
           </PanelSection>
         </section>
+
+        {/* Kanji divider */}
+        <div className="kanji-divider">
+          <span>案内 · GUIDE</span>
+        </div>
 
         {/* How-to + shortcuts */}
         <section id="how" className="grid grid-cols-1 gap-4 md:grid-cols-3">

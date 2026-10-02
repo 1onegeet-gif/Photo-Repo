@@ -2,8 +2,8 @@
 
 import { useMosaic } from "@/lib/mosaic-store";
 import { useCustomPresets } from "@/lib/useCustomPresets";
-import { useState } from "react";
-import { Bookmark, Trash2, Save, Star } from "lucide-react";
+import { useRef, useState } from "react";
+import { Bookmark, Trash2, Save, Star, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +11,10 @@ import type { ParamSnapshot } from "@/lib/mosaic-store";
 
 export function CustomPresetBar() {
   const s = useMosaic();
-  const { presets, add, remove } = useCustomPresets();
+  const { presets, add, remove, exportJson, importJson } = useCustomPresets();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const snapshot = (): Partial<ParamSnapshot> => {
     // Capture all renderable params
@@ -54,6 +55,43 @@ export function CustomPresetBar() {
   const onApply = (patch: Partial<ParamSnapshot>) => {
     s.applyPreset(patch);
     toast.success("Custom preset applied");
+  };
+
+  const onExport = () => {
+    if (presets.length === 0) {
+      toast.error("No presets to export yet.");
+      return;
+    }
+    const json = exportJson();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mosaic-presets-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast.success(`Exported ${presets.length} presets`);
+  };
+
+  const onImportClick = () => fileRef.current?.click();
+
+  const onImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const count = importJson(String(reader.result));
+      if (count > 0) {
+        toast.success(`Imported ${count} presets`);
+      } else {
+        toast.error("No valid presets found in file");
+      }
+    };
+    reader.onerror = () => toast.error("Could not read file");
+    reader.readAsText(f);
+    e.target.value = "";
   };
 
   return (
@@ -103,6 +141,39 @@ export function CustomPresetBar() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Export / Import row */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={presets.length === 0}
+          className="flex items-center gap-1 rounded-md border border-border/60 bg-paper/50 px-2 py-1 text-[10px] text-foreground/70 transition-colors hover:border-seal/40 hover:bg-paper disabled:opacity-40"
+          title="Download presets as JSON"
+        >
+          <Download className="h-3 w-3 text-matcha" />
+          Export
+        </button>
+        <button
+          type="button"
+          onClick={onImportClick}
+          className="flex items-center gap-1 rounded-md border border-border/60 bg-paper/50 px-2 py-1 text-[10px] text-foreground/70 transition-colors hover:border-seal/40 hover:bg-paper"
+          title="Load presets from JSON"
+        >
+          <Upload className="h-3 w-3 text-seal" />
+          Import
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="sr-only"
+          onChange={onImportFile}
+        />
+        <span className="ml-auto text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50">
+          sync across devices
+        </span>
       </div>
 
       {presets.length === 0 ? (

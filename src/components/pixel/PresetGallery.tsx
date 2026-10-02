@@ -37,6 +37,7 @@ export function PresetGallery({ sampleSrc }: PresetGalleryProps) {
           title={p.desc}
         >
           <PresetThumb preset={p} sampleSrc={sampleSrc} />
+          <span className="preset-kanji-stamp">{p.jp}</span>
           <div className="flex items-baseline justify-between gap-1 px-0.5">
             <span className="font-display text-[11px] font-semibold leading-tight text-foreground">
               {p.name}

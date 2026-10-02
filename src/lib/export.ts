@@ -20,7 +20,11 @@ export interface ExportMeta {
   jitter?: number;
   /** Seed for jitter RNG (used by SVG export). */
   seed?: number;
+  /** Optional SVG filter effect to apply to the mosaic group. */
+  filter?: SvgFilterKind;
 }
+
+export type SvgFilterKind = "none" | "soft-blur" | "emboss" | "posterize" | "grain" | "glow";
 
 function download(filename: string, content: string | Blob, mime: string) {
   const blob =
@@ -204,7 +208,7 @@ export function exportAscii(meta: ExportMeta, name = "mosaic.txt") {
 
 /** SVG export — true vector mosaic. Each cell becomes a shape element. */
 export function exportSvg(meta: ExportMeta, name = "mosaic.svg") {
-  const { width, height, cells, background, shape, shapeSize, rotation = 0, jitter = 0, seed = 1 } = meta;
+  const { width, height, cells, background, shape, shapeSize, rotation = 0, jitter = 0, seed = 1, filter = "none" } = meta;
   const bg = background ? rgbToHex(background) : "transparent";
   // Simple seeded RNG for jitter (mulberry32)
   let a = (seed >>> 0) || 1;
@@ -225,15 +229,46 @@ export function exportSvg(meta: ExportMeta, name = "mosaic.svg") {
     return shapeToSvg(useShape, c.x + (rand() - 0.5) * j, c.y + (rand() - 0.5) * j, s, hex, gap, rotation + jr);
   });
 
+  const { filterDefs, filterAttr } = buildSvgFilter(filter);
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision">
+  <defs>${filterDefs}</defs>
   <rect width="${width}" height="${height}" fill="${bg}"/>
-  <g>
+  <g${filterAttr}>
 ${parts.map((p) => "    " + p).join("\n")}
   </g>
 </svg>
 `;
   download(name, svg, "image/svg+xml");
+}
+
+/** Build an SVG `<filter>` definition for the given effect kind. */
+function buildSvgFilter(kind: SvgFilterKind): { filterDefs: string; filterAttr: string } {
+  if (kind === "none") return { filterDefs: "", filterAttr: "" };
+  const id = `fx-${kind}`;
+  const filterAttr = ` filter="url(#${id})"`;
+  let defs = "";
+  switch (kind) {
+    case "soft-blur":
+      defs = `<filter id="${id}" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="0.6"/></filter>`;
+      break;
+    case "emboss":
+      defs = `<filter id="${id}" x="-5%" y="-5%" width="110%" height="110%"><feConvolveMatrix order="3" preserveAlpha="true" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0"/></filter>`;
+      break;
+    case "posterize":
+      // feComponentTransfer with discrete table — posterize to ~6 levels
+      defs = `<filter id="${id}"><feComponentTransfer><feFuncR table="0 0.2 0.4 0.6 0.8 1" type="discrete"/><feFuncG table="0 0.2 0.4 0.6 0.8 1" type="discrete"/><feFuncB table="0 0.2 0.4 0.6 0.8 1" type="discrete"/></feComponentTransfer></filter>`;
+      break;
+    case "grain":
+      // feTurbulence + composite for film grain
+      defs = `<filter id="${id}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise"/><feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.12 0" result="grain"/><feComposite in="grain" in2="SourceGraphic" operator="in" result="masked"/><feBlend in="SourceGraphic" in2="masked" mode="multiply"/></filter>`;
+      break;
+    case "glow":
+      defs = `<filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+      break;
+  }
+  return { filterDefs: defs, filterAttr };
 }
 
 function uniquePalette(cells: Cell[]): string[] {

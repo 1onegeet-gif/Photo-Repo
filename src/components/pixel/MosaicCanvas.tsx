@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { rgbToHex } from "@/lib/color";
+import { toast } from "sonner";
 import type { Stats } from "./StatsPanel";
 
 interface MosaicCanvasProps {
@@ -348,9 +349,41 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
             }
             onPointerDown={state.compareMode ? onComparePointer : undefined}
             onPointerLeave={() => setHover(null)}
-            onClick={() =>
-              state.inspectMode || state.compareMode ? undefined : setLightbox(true)
-            }
+            onClick={() => {
+              if (state.compareMode) return;
+              if (state.inspectMode) {
+                // Eyedropper: add hovered cell's color to the locked palette
+                if (hover?.cell) {
+                  const c = hover.cell.color;
+                  const rgb: [number, number, number] = [c[0] | 0, c[1] | 0, c[2] | 0];
+                  const existing = state.palette;
+                  if (existing) {
+                    // Avoid duplicates
+                    const dupe = existing.colors.some(
+                      (p) => p[0] === rgb[0] && p[1] === rgb[1] && p[2] === rgb[2],
+                    );
+                    if (dupe) {
+                      toast.info("Color already in palette");
+                    } else {
+                      state.setPalette({
+                        ...existing,
+                        colors: [...existing.colors, rgb],
+                      });
+                      toast.success(`Added ${rgbToHex(rgb)} to palette`);
+                    }
+                  } else {
+                    state.setPalette({
+                      colors: [rgb],
+                      source: "custom",
+                      name: "custom",
+                    });
+                    toast.success(`Started palette with ${rgbToHex(rgb)}`);
+                  }
+                }
+                return;
+              }
+              setLightbox(true);
+            }}
           >
             <canvas
               ref={displayRef}
@@ -536,7 +569,7 @@ function InspectTooltip({ hover }: { hover: HoverInfo }) {
   return (
     <div
       className="pointer-events-none absolute z-20 flex items-center gap-2 rounded-md border border-border bg-paper/95 px-2 py-1.5 shadow-lg backdrop-blur"
-      style={{ left, top, maxWidth: 200 }}
+      style={{ left, top, maxWidth: 220 }}
     >
       <span
         className="h-7 w-7 shrink-0 rounded border border-border"
@@ -549,6 +582,9 @@ function InspectTooltip({ hover }: { hover: HoverInfo }) {
         </span>
         <span className="text-muted-foreground">
           rgb({c.color[0] | 0},{c.color[1] | 0},{c.color[2] | 0})
+        </span>
+        <span className="mt-0.5 text-[9px] text-seal">
+          click to add to palette →
         </span>
       </div>
     </div>

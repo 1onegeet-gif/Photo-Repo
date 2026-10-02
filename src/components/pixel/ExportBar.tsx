@@ -9,6 +9,7 @@ import {
   exportPng,
   exportSvg,
   ExportMeta,
+  SvgFilterKind,
 } from "@/lib/export";
 import { useMosaic } from "@/lib/mosaic-store";
 import { toast } from "sonner";
@@ -20,17 +21,29 @@ import {
   FileText,
   Spline,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ExportBarProps {
   displayRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
+const SVG_FILTERS: { value: SvgFilterKind; label: string; jp: string }[] = [
+  { value: "none", label: "None", jp: "無" },
+  { value: "soft-blur", label: "Soft blur", jp: "暈し" },
+  { value: "emboss", label: "Emboss", jp: "浮彫" },
+  { value: "posterize", label: "Posterize", jp: "段調" },
+  { value: "grain", label: "Grain", jp: "粒子" },
+  { value: "glow", label: "Glow", jp: "光彩" },
+];
+
 export function ExportBar({ displayRef }: ExportBarProps) {
   const s = useMosaic();
   const [pending, setPending] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
+  const [svgFilter, setSvgFilter] = useState<SvgFilterKind>("none");
 
   const gather = async (): Promise<ExportMeta | null> => {
     if (!s.hasImage) {
@@ -50,6 +63,7 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           rotation: s.rotation,
           jitter: s.jitter,
           seed: s.seed,
+          filter: svgFilter,
         });
         window.removeEventListener("mosaic:cells", handler);
       };
@@ -183,6 +197,34 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           pending={pending === "ascii"}
           onClick={handleAscii}
         />
+      </div>
+
+      {/* SVG filter selector — applies to SVG export only */}
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/50 bg-paper/40 px-3 py-2">
+        <span className="flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <Sparkles className="h-3 w-3 text-seal" />
+          SVG filter
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {SVG_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setSvgFilter(f.value)}
+              aria-pressed={svgFilter === f.value}
+              className={cn(
+                "filter-chip flex items-center gap-1 rounded px-2 py-0.5 text-[10px] transition-all",
+                svgFilter === f.value
+                  ? "bg-seal text-paper"
+                  : "bg-paper/60 text-muted-foreground hover:bg-paper hover:text-foreground",
+              )}
+              title={f.label}
+            >
+              <span>{f.label}</span>
+              <span className="font-display text-[9px] opacity-70">{f.jp}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <button

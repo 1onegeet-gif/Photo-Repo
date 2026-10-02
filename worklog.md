@@ -284,3 +284,61 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired
 - Could add: SVG filter effects (blur/emboss/posterize), multi-image gallery, drag-to-resize canvas, color picker eyedropper, preset export/import as JSON file
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 12 (cron round 4)
+Agent: main (Z.ai Code)
+Task: QA review + add SVG filter effects, preset export/import, eyedropper, styling polish
+
+Work Log:
+- QA check: dev server was down at start of session (process died in round 3, not auto-restarting). Verified code via lint + tsc throughout. Browser QA deferred.
+- Added SVG filter effects for SVG export:
+  - New `SvgFilterKind` type: "none" | "soft-blur" | "emboss" | "posterize" | "grain" | "glow"
+  - `buildSvgFilter()` generates SVG `<filter>` defs (feGaussianBlur, feConvolveMatrix, feComponentTransfer, feTurbulence, feMerge)
+  - ExportBar: 6-button filter selector with kanji labels (無/暈し/浮彫/段調/粒子/光彩), filter-chip hover ring, selected state
+  - SVG export now wraps cells in `<g filter="url(#fx-...)">` + includes `<defs>`
+- Added preset export/import as JSON file:
+  - `useCustomPresets` hook: `exportJson()` serializes all presets, `importJson()` parses + merges (re-ids to avoid collisions)
+  - CustomPresetBar: Export button (downloads JSON), Import button (file picker), "sync across devices" label
+  - Format: `{ format: "mosaic-atelier-presets/v1", presets: [...] }`
+- Added color picker eyedropper:
+  - In inspect mode, clicking a cell now adds its color to the locked palette (creates palette if none exists)
+  - Duplicate detection with toast feedback
+  - InspectTooltip now shows "click to add to palette →" hint
+  - Crosshair cursor remains for inspect mode
+- Styling polish in globals.css:
+  - Loading skeleton shimmer (`.skeleton`) — gradient sweep placeholder
+  - Preset kanji corner stamp (`.preset-kanji-stamp`) — small kanji in top-right of preset thumbnails
+  - Kanji divider (`.kanji-divider`) — flex line with centered kanji label, applied between Export and How-to sections
+  - Filter chip hover ring (`.filter-chip::after`) — subtle vermillion ring on hover
+  - Paper grain (`.paper-grain`) — lighter SVG noise overlay
+  - Eyedropper cursor class (`.cursor-eyedropper`)
+- Applied new classes: filter-chip to SVG filter buttons, preset-kanji-stamp to preset thumbnails, kanji-divider before Export + How-to sections
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code)
+- agent-browser verification: DEFERRED — dev server down entire session (process died round 3, not auto-restarting in cron context). Code verified via lint + tsc.
+
+Stage Summary:
+- Round 4 complete: 3 new features (SVG filter effects, preset export/import, eyedropper) + styling polish (filter chips, kanji stamps, kanji dividers, skeleton, paper grain)
+- Code verified via lint + tsc; browser QA pending dev server recovery
+- Total: 16 built-in + custom localStorage presets, 6 export formats (with 6 SVG filter variants), 15 keyboard shortcuts, compare/inspect/eyedropper/lightbox/transform modes
+
+---
+Current project status description/assessment (post round 4)
+- Mosaic Atelier now has: 16 built-in + custom localStorage presets (with export/import), 6 export formats (PNG/SVG/HTML/CSS/JSON/ASCII) with 6 SVG filter variants, before/after compare, cell inspect + eyedropper (click to add color to palette), URL state share, batch export, lightbox, undo/redo, live stats with color frequency histogram, palette lock, shape mix, Bayer dithering, image transforms (flip/rotate), help/onboarding overlay, 15 keyboard shortcuts
+- Aesthetic: cream washi paper with animated enso, seigaiha corners, hanko seal, kanji watermark, ink-underline nav, sample hover dots, stat-pulse, compare pulse, deckle edges, asanoha pattern, toast stamp-in, scroll-reveal, header gradient strip, modal animations, histogram shimmer, badge pulses, kanji dividers, preset kanji stamps, filter chip rings, skeleton shimmer, paper grain
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 4)
+- DONE: SVG filter effects (6 variants), preset export/import as JSON, color picker eyedropper, styling polish (filter chips, kanji stamps, kanji dividers, skeleton, paper grain)
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down entire session)
+
+Unresolved issues or risks, priority recommendations for next phase
+- **CRITICAL: dev server has been down since round 3** — next round MUST verify it's back up and run full agent-browser QA on all features from rounds 3-4
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: multi-image gallery, drag-to-resize canvas, image histogram/levels panel, animated GIF export, tile-based large image tiling
+- The recurring 15-min webDevReview cron will continue iterating
