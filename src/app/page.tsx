@@ -23,6 +23,11 @@ import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useUrlState } from "@/lib/useUrlState";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import {
   Download,
   BookOpen,
   Lightbulb,
@@ -215,15 +220,63 @@ export default function Home() {
           <CustomPresetBar />
         </section>
 
-        {/* Workspace: canvas + controls */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        {/* Workspace: canvas + controls (resizable on desktop) */}
+        <section className="hidden lg:block">
+          <ResizablePanelGroup direction="horizontal" className="gap-4">
+            <ResizablePanel defaultSize={62} minSize={40} maxSize={80}>
+              <div className="flex flex-col gap-4">
+                <MosaicCanvas
+                  sourceRef={sourceRef}
+                  displayRef={displayRef}
+                  onStats={setStats}
+                />
+                {/* Stats panel under the canvas */}
+                <div className="matte-card washi-texture rounded-lg p-4">
+                  <StatsPanel
+                    stats={stats}
+                    width={state.sourceWidth}
+                    height={state.sourceHeight}
+                  />
+                </div>
+                {/* Levels panel — source image RGB histogram */}
+                <div className="matte-card washi-texture rounded-lg p-4">
+                  <LevelsPanel
+                    sourceRef={sourceRef}
+                    hasImage={state.hasImage}
+                    width={state.sourceWidth}
+                    height={state.sourceHeight}
+                  />
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle className="!w-1.5 rounded-full bg-border/40 hover:bg-seal/40 transition-colors" />
+            <ResizablePanel defaultSize={38} minSize={20} maxSize={55}>
+              <aside className="max-h-[calc(100vh-92px)] overflow-y-auto pr-1">
+                <div className="matte-card washi-texture rounded-lg p-4">
+                  <ControlPanel />
+                  <div className="mt-6">
+                    <TransformBar />
+                  </div>
+                  <div className="mt-6">
+                    <ShapeMixPanel />
+                  </div>
+                  <div className="mt-6">
+                    <PaletteLockPanel sourceRef={sourceRef} />
+                  </div>
+                </div>
+              </aside>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </section>
+
+        {/* Workspace: canvas + controls (stacked on mobile) */}
+        <section className="grid grid-cols-1 gap-6 lg:hidden">
           <div className="flex flex-col gap-4">
             <MosaicCanvas
               sourceRef={sourceRef}
               displayRef={displayRef}
               onStats={setStats}
             />
-            {/* Stats panel under the canvas */}
             <div className="matte-card washi-texture rounded-lg p-4">
               <StatsPanel
                 stats={stats}
@@ -231,7 +284,6 @@ export default function Home() {
                 height={state.sourceHeight}
               />
             </div>
-            {/* Levels panel — source image RGB histogram */}
             <div className="matte-card washi-texture rounded-lg p-4">
               <LevelsPanel
                 sourceRef={sourceRef}
@@ -241,7 +293,7 @@ export default function Home() {
               />
             </div>
           </div>
-          <aside className="lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto lg:pr-1">
+          <aside>
             <div className="matte-card washi-texture rounded-lg p-4">
               <ControlPanel />
               <div className="mt-6">

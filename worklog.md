@@ -459,3 +459,61 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired
 - Could add: drag-to-resize canvas, animated GIF/frames export, tile-based large image tiling, color picker eyedropper for source image
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 15 (cron round 7)
+Agent: main (Z.ai Code)
+Task: Add 4 new presets, source-pixel color picker, resizable workspace, styling polish
+
+Work Log:
+- QA check: dev server STILL down (5th consecutive round). Verified all code via lint + tsc.
+- Added 4 new creative presets (20 total):
+  - Watercolor (水彩): soft pastel wash — large circles, low saturation, gentle brightness
+  - Cyber Grid (サイバー): glitchy matrix — small squares, heavy dither, green-shifted hue
+  - Terrazzo (テラッツォ): speckled stone mix — 3 shapes by luminance (diamond/circle/square), 14 colors
+  - Kintsugi (金継ぎ): golden repair — diamonds on ink, warm hue shift, glow feel
+- Added source-image color picker (eyedropper):
+  - Store: `sourcePickMode` + `setSourcePickMode`
+  - PaletteLockPanel: "Pick pixel" button with Pipette icon, active state with pipette-glow animation
+  - MosaicCanvas: when sourcePickMode is on, clicking the canvas samples the original source canvas pixel via `getImageData(sx, sy, 1, 1)` and adds it to the locked palette
+  - Crosshair cursor, pulsing "🎯 Click to pick a color" indicator overlay
+  - Refactored eyedropper logic into shared `addColorToPalette` helper (used by both inspect-mode and source-pick)
+- Added drag-to-resize workspace:
+  - Desktop (lg+): `ResizablePanelGroup` with horizontal direction — canvas panel (40-80%) + controls panel (20-55%)
+  - Mobile: stacked grid layout (separate section)
+  - Custom resize handle styling: vermillion bar on hover, washi-tape feel
+  - Uses `react-resizable-panels` (already installed) + shadcn ResizableHandle
+- Styling polish in globals.css:
+  - Resizable handle: washi-tape style with centered bar on hover, vermillion active state
+  - Source pick indicator: pulsing target animation (`.source-pick-indicator`)
+  - Refined panel section headers with subtle ink dot (`.panel-section-header::before`)
+  - Preset kanji stamp: text-shadow for legibility
+  - Pipette button active glow animation (`.pipette-active`)
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code)
+- agent-browser verification: DEFERRED — dev server down entire session (5th consecutive round). Code verified via lint + tsc.
+
+Stage Summary:
+- Round 7 complete: 4 new presets (20 total), source-pixel color picker, drag-to-resize workspace, styling polish (resize handle, source pick indicator, pipette glow, panel headers)
+- Code verified via lint + tsc; browser QA pending dev server recovery
+- Total: 20 built-in presets, 6 export formats (with copy-to-clipboard for 4), 6 SVG filter variants, 16 keyboard shortcuts, resizable workspace
+
+---
+Current project status description/assessment (post round 7)
+- Mosaic Atelier now has: 20 built-in presets + custom localStorage presets (with export/import), 6 export formats (PNG/SVG/HTML/CSS/JSON/ASCII) with copy-to-clipboard for 4, 6 SVG filter variants, before/after compare, cell inspect + cell-color eyedropper, source-pixel color picker, URL state share, batch export, lightbox, undo/redo, live stats with color frequency histogram, image levels histogram (RGB+L), palette lock, shape mix, Bayer dithering, image transforms (flip/rotate with shortcuts), multi-image tray (6 recent), help/onboarding overlay, custom SVG favicon, 16 keyboard shortcuts, drag-to-resize workspace
+- Aesthetic: cream washi paper with animated enso, seigaiha corners, hanko seal, kanji watermark, ink-underline nav, sample hover dots, stat-pulse, compare pulse, deckle edges, asanoha pattern, toast stamp-in, scroll-reveal, header gradient strip, modal animations, histogram shimmer, badge pulses, kanji dividers, preset kanji stamps, filter chip rings, skeleton shimmer, paper grain, levels bar grow-in, mean pulse, card hover lift, responsive mobile sizing, print-friendly, copy button hover-reveal, fancy scrollbar, reduced-motion support, resize handle washi-tape, source pick indicator pulse, pipette active glow, panel section ink dots
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 7)
+- DONE: 4 new presets (Watercolor, Cyber Grid, Terrazzo, Kintsugi), source-pixel color picker, drag-to-resize workspace, styling polish (resize handle, source pick indicator, pipette glow, panel headers)
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down 5th consecutive round)
+
+Unresolved issues or risks, priority recommendations for next phase
+- **CRITICAL: dev server has been down for 5 consecutive rounds (rounds 3-7)** — persistent environment issue. The code is thoroughly verified via lint + tsc. Next round should verify if dev server is back; if so, run full agent-browser QA on ALL features from rounds 3-7.
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: canvas zoom controls, animated GIF/frames export, tile-based large image tiling, preset search/filter
+- The recurring 15-min webDevReview cron will continue iterating

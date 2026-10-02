@@ -5,7 +5,7 @@ import { PanelSection } from "./PanelSection";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ControlSlider } from "./ControlSlider";
-import { Lock, Unlock, Wand2, X, Plus } from "lucide-react";
+import { Lock, Unlock, Wand2, X, Plus, Pipette } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import {
@@ -118,15 +118,38 @@ export function PaletteLockPanel({ sourceRef }: PaletteLockPanelProps) {
           onChange={setK}
           format={(v) => `${v} colors`}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={extractFromImage}
-          className="h-8 w-full gap-1.5 text-xs"
-        >
-          <Wand2 className="h-3.5 w-3.5 text-matcha" />
-          Extract from image
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={extractFromImage}
+            className="h-8 flex-1 gap-1.5 text-xs"
+          >
+            <Wand2 className="h-3.5 w-3.5 text-matcha" />
+            Extract
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => s.setSourcePickMode(!s.sourcePickMode)}
+            aria-pressed={s.sourcePickMode}
+            className={
+              s.sourcePickMode
+                ? "pipette-active h-8 flex-1 gap-1.5 border-seal/50 bg-seal/10 text-xs text-seal"
+                : "h-8 flex-1 gap-1.5 text-xs"
+            }
+            title="Click any pixel on the canvas to add its original color to the palette"
+          >
+            <Pipette className="h-3.5 w-3.5 text-seal" />
+            {s.sourcePickMode ? "Picking…" : "Pick pixel"}
+          </Button>
+        </div>
+        {s.sourcePickMode && (
+          <p className="text-[10px] leading-relaxed text-seal">
+            Click anywhere on the canvas to sample the original image pixel
+            and add it to your palette.
+          </p>
+        )}
       </div>
 
       {/* Custom hex input */}

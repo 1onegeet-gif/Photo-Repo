@@ -197,6 +197,36 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
     [state.inspectMode, cells, state.sourceWidth, state.sourceHeight],
   );
 
+  // Shared helper: add an RGB color to the locked palette (with dedupe + toast)
+  const addColorToPalette = useCallback(
+    (rgb: [number, number, number]) => {
+      const existing = state.palette;
+      const hex = rgbToHex(rgb);
+      if (existing) {
+        const dupe = existing.colors.some(
+          (p) => p[0] === rgb[0] && p[1] === rgb[1] && p[2] === rgb[2],
+        );
+        if (dupe) {
+          toast.info("Color already in palette");
+          return;
+        }
+        state.setPalette({
+          ...existing,
+          colors: [...existing.colors, rgb],
+        });
+        toast.success(`Added ${hex} to palette`);
+      } else {
+        state.setPalette({
+          colors: [rgb],
+          source: "custom",
+          name: "custom",
+        });
+        toast.success(`Started palette with ${hex}`);
+      }
+    },
+    [state],
+  );
+
   // Draw the original image to the compare canvas when compareMode is on
   useEffect(() => {
     if (!state.compareMode) return;
@@ -338,7 +368,10 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
               aspectRatio: `${aspect}`,
               width: "100%",
               maxWidth: "min(100%, calc((100vh - 16rem) * " + aspect + "))",
-              cursor: state.compareMode || state.inspectMode ? "crosshair" : "zoom-in",
+              cursor:
+                state.compareMode || state.inspectMode || state.sourcePickMode
+                  ? "crosshair"
+                  : "zoom-in",
             }}
             onPointerMove={
               state.compareMode
@@ -349,36 +382,30 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
             }
             onPointerDown={state.compareMode ? onComparePointer : undefined}
             onPointerLeave={() => setHover(null)}
-            onClick={() => {
+            onClick={(e) => {
               if (state.compareMode) return;
+              // Source-pick mode: sample any pixel from the original source canvas
+              if (state.sourcePickMode) {
+                const wrap = imgWrapRef.current;
+                const src = sourceRef.current;
+                if (!wrap || !src) return;
+                const rect = wrap.getBoundingClientRect();
+                const nx = (e.clientX - rect.left) / rect.width;
+                const ny = (e.clientY - rect.top) / rect.height;
+                const sx = Math.max(0, Math.min(src.width - 1, Math.floor(nx * src.width)));
+                const sy = Math.max(0, Math.min(src.height - 1, Math.floor(ny * src.height)));
+                const sctx = src.getContext("2d", { willReadFrequently: true });
+                if (!sctx) return;
+                const px = sctx.getImageData(sx, sy, 1, 1).data;
+                const rgb: [number, number, number] = [px[0], px[1], px[2]];
+                addColorToPalette(rgb);
+                return;
+              }
               if (state.inspectMode) {
                 // Eyedropper: add hovered cell's color to the locked palette
                 if (hover?.cell) {
                   const c = hover.cell.color;
-                  const rgb: [number, number, number] = [c[0] | 0, c[1] | 0, c[2] | 0];
-                  const existing = state.palette;
-                  if (existing) {
-                    // Avoid duplicates
-                    const dupe = existing.colors.some(
-                      (p) => p[0] === rgb[0] && p[1] === rgb[1] && p[2] === rgb[2],
-                    );
-                    if (dupe) {
-                      toast.info("Color already in palette");
-                    } else {
-                      state.setPalette({
-                        ...existing,
-                        colors: [...existing.colors, rgb],
-                      });
-                      toast.success(`Added ${rgbToHex(rgb)} to palette`);
-                    }
-                  } else {
-                    state.setPalette({
-                      colors: [rgb],
-                      source: "custom",
-                      name: "custom",
-                    });
-                    toast.success(`Started palette with ${rgbToHex(rgb)}`);
-                  }
+                  addColorToPalette([c[0] | 0, c[1] | 0, c[2] | 0]);
                 }
                 return;
               }
@@ -427,6 +454,12 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
             {/* Inspect tooltip */}
             {state.inspectMode && hover?.cell && (
               <InspectTooltip hover={hover} />
+            )}
+            {/* Source pick mode indicator */}
+            {state.sourcePickMode && (
+              <div className="source-pick-indicator pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-seal/90 px-3 py-1 text-[10px] font-medium text-paper shadow-md">
+                🎯 Click to pick a color
+              </div>
             )}
             {busy && (
               <div className="pointer-events-none absolute right-2 top-2 rounded bg-paper/85 px-2 py-0.5 text-[10px] text-muted-foreground">

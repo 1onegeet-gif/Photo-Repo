@@ -54,7 +54,8 @@ export interface MosaicState extends ParamSnapshot {
   showFocal: boolean;
   compareMode: boolean;
   splitPos: number;        // 0..1 — compare slider position
-  inspectMode: boolean;    // hover-to-inspect cells
+  inspectMode: boolean;    // hover-to-inspect cells (click to add cell color to palette)
+  sourcePickMode: boolean; // pick any pixel from original source → add to palette
   helpOpen: boolean;
   // History
   past: ParamSnapshot[];
@@ -91,6 +92,7 @@ export interface MosaicState extends ParamSnapshot {
   setCompareMode: (v: boolean) => void;
   setSplitPos: (v: number) => void;
   setInspectMode: (v: boolean) => void;
+  setSourcePickMode: (v: boolean) => void;
   // Transform
   setTransform: (t: Partial<{ flipH: boolean; flipV: boolean; rotate90: number }>) => void;
   flipH: () => void;
@@ -160,6 +162,7 @@ export const useMosaic = create<MosaicState>((set, get) => ({
   compareMode: false,
   splitPos: 0.5,
   inspectMode: false,
+  sourcePickMode: false,
   helpOpen: false,
   past: [],
   future: [],
@@ -289,6 +292,7 @@ export const useMosaic = create<MosaicState>((set, get) => ({
   setCompareMode: (v) => set({ compareMode: v }),
   setSplitPos: (v) => set({ splitPos: Math.max(0, Math.min(1, v)) }),
   setInspectMode: (v) => set({ inspectMode: v }),
+  setSourcePickMode: (v) => set({ sourcePickMode: v }),
   setTransform: (t) => set((s) => ({ transform: { ...s.transform, ...t } })),
   flipH: () => set((s) => ({ transform: { ...s.transform, flipH: !s.transform.flipH } })),
   flipV: () => set((s) => ({ transform: { ...s.transform, flipV: !s.transform.flipV } })),

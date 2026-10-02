@@ -1172,3 +1172,76 @@ a:focus-visible {
     animation: none !important;
   }
 }
+
+/* ----------------------------------------------------------------
+   Resizable handle — washi-tape style
+----------------------------------------------------------------- */
+[data-panel-resize-handle-id] {
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+[data-panel-resize-handle-id]:hover,
+[data-panel-resize-handle-id][data-resize-handle-state="drag"] {
+  background: oklch(0.55 0.18 32 / 0.4) !important;
+}
+[data-panel-resize-handle-id]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: oklch(0.55 0.18 32 / 0.5);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+[data-panel-resize-handle-id]:hover::after {
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------------
+   Source pick mode — pulsing target indicator
+----------------------------------------------------------------- */
+@keyframes target-pulse {
+  0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+}
+.source-pick-indicator {
+  animation: target-pulse 1.4s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------
+   Refined panel section headers — subtle ink dot
+----------------------------------------------------------------- */
+.panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.panel-section-header::before {
+  content: "●";
+  font-size: 6px;
+  color: oklch(0.55 0.18 32 / 0.5);
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------
+   Preset gallery — kanji stamp refined position
+----------------------------------------------------------------- */
+.preset-kanji-stamp {
+  text-shadow: 0 0 3px oklch(0.97 0.014 85 / 0.7);
+}
+
+/* ----------------------------------------------------------------
+   Color picker pipette button — active glow
+----------------------------------------------------------------- */
+.pipette-active {
+  box-shadow: 0 0 0 2px oklch(0.55 0.18 32 / 0.3);
+  animation: pipette-glow 1.5s ease-in-out infinite;
+}
+@keyframes pipette-glow {
+  0%, 100% { box-shadow: 0 0 0 2px oklch(0.55 0.18 32 / 0.3); }
+  50% { box-shadow: 0 0 0 4px oklch(0.55 0.18 32 / 0.15); }
+}
