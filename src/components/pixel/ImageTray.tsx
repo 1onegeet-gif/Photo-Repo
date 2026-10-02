@@ -20,7 +20,7 @@ export function ImageTray({ onPick }: ImageTrayProps) {
         <Images className="h-3 w-3 text-seal" />
         tray
       </span>
-      <div className="flex flex-1 gap-1.5 overflow-x-auto">
+      <div className="scroll-x-fancy flex flex-1 gap-1.5 overflow-x-auto">
         {images.map((img) => (
           <div
             key={img.id}

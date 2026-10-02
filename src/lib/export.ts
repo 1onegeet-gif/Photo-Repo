@@ -41,16 +41,35 @@ function download(filename: string, content: string | Blob, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-/** Export PNG from the live canvas (preserves the exact rendered look). */
-export function exportPng(canvas: HTMLCanvasElement, name = "mosaic.png") {
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    download(name, blob, "image/png");
-  }, "image/png");
+/** Copy text to clipboard with a fallback for older browsers. Returns success. */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to legacy method
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    ta.style.pointerEvents = "none";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
-/** Build a single-file HTML using a CSS grid of divs (each cell is a colored box). */
-export function exportHtml(meta: ExportMeta, name = "mosaic.html") {
+/** Build the HTML export string (shared between download + clipboard). */
+function buildHtmlString(meta: ExportMeta): string {
   const { width, height, cells, background, shape, shapeSize } = meta;
   const bg = background ? rgbToCss(background) : "transparent";
   const cellDivs = cells
@@ -60,12 +79,10 @@ export function exportHtml(meta: ExportMeta, name = "mosaic.html") {
       const w = +c.w.toFixed(1);
       const h = +c.h.toFixed(1);
       const col = rgbToHex(c.color);
-      // Use absolute positioning so variable-size cells render correctly
       return `      <i style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${col}"></i>`;
     })
     .join("\n");
-
-  const html = `<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -91,38 +108,25 @@ ${cellDivs}
 </body>
 </html>
 `;
-  download(name, html, "text/html");
 }
 
-/** Build a CSS file using a single element with a giant `box-shadow` list. */
-export function exportCss(meta: ExportMeta, name = "mosaic.css") {
-  const { width, height, cells, background } = meta;
+/** Build the CSS export string (shared between download + clipboard). */
+function buildCssString(meta: ExportMeta): string {
+  const { width, height, cells, background, shape, shapeSize } = meta;
   const bg = background ? rgbToHex(background) : "transparent";
-  // box-shadow format: offsetX offsetY blur(0) spread(colorW) color
-  // Each cell rendered as a tiny rect of size w×h at (x,y).
-  // We use `inset` so the spread starts at the box itself, sized 1×1, so
-  // the offset/scale equals the cell position. Easier: use a 1px canvas.
   const shadows = cells
     .map((c) => {
       const x = +c.x.toFixed(1);
       const y = +c.y.toFixed(1);
       const w = +c.w.toFixed(1);
       const h = +c.h.toFixed(1);
-      // box-shadow: <x> <y> 0 0 <w>×<h>? CSS box-shadow spread is uniform,
-      // so we approximate with the smaller dimension as spread and use the
-      // larger dimension via... actually CSS box-shadow can't do rectangles
-      // of differing w/h. We'll emit a comment + use `outline` trick: instead
-      // use the average spread and emit accurate positions. For a true
-      // rectangle we'd need multiple shadows. Compromise: spread = w (assume
-      // square-ish cells), and document this in a header comment.
       const spread = Math.min(w, h);
       return `${x}px ${y}px 0 ${spread}px ${rgbToHex(c.color)}`;
     })
     .join(",\n    ");
-
-  const css = `/*
+  return `/*
   Mosaic Atelier — CSS export
-  Shape: ${meta.shape} · shapeSize ${Math.round(meta.shapeSize * 100)}%
+  Shape: ${shape} · shapeSize ${Math.round(shapeSize * 100)}%
   Canvas: ${width}×${height} · ${cells.length} cells
   Note: box-shadow spread is uniform, so non-square cells are rendered as
   squares using the smaller dimension. For true rectangles use the HTML export.
@@ -138,11 +142,10 @@ export function exportCss(meta: ExportMeta, name = "mosaic.css") {
     ${shadows};
 }
 `;
-  download(name, css, "text/css");
 }
 
-/** JSON export — full reconstruction data (cells + metadata). */
-export function exportJson(meta: ExportMeta, name = "mosaic.json") {
+/** Build the JSON export string (shared between download + clipboard). */
+function buildJsonString(meta: ExportMeta): string {
   const payload = {
     format: "mosaic-atelier/v1",
     width: meta.width,
@@ -171,7 +174,78 @@ export function exportJson(meta: ExportMeta, name = "mosaic.json") {
       hex: rgbToHex(c.color),
     })),
   };
-  download(name, JSON.stringify(payload, null, 2), "application/json");
+  return JSON.stringify(payload, null, 2);
+}
+
+/** Build the SVG export string (shared between download + clipboard). */
+function buildSvgString(meta: ExportMeta): string {
+  const { width, height, cells, background, shape, shapeSize, rotation = 0, jitter = 0, seed = 1, filter = "none" } = meta;
+  const bg = background ? rgbToHex(background) : "transparent";
+  let a = (seed >>> 0) || 1;
+  const rand = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const fillFraction = Math.max(0.05, Math.min(1, shapeSize));
+  const parts: string[] = cells.map((c) => {
+    const s = Math.min(c.w, c.h);
+    const gap = (1 - fillFraction) * (s / 2);
+    const j = jitter * (rand() - 0.5) * s * 0.3;
+    const jr = jitter * (rand() - 0.5) * 40;
+    const hex = rgbToHex(c.color);
+    const useShape = (c.shape ?? shape) as ShapeKind;
+    return shapeToSvg(useShape, c.x + (rand() - 0.5) * j, c.y + (rand() - 0.5) * j, s, hex, gap, rotation + jr);
+  });
+  const { filterDefs, filterAttr } = buildSvgFilter(filter);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision">
+  <defs>${filterDefs}</defs>
+  <rect width="${width}" height="${height}" fill="${bg}"/>
+  <g${filterAttr}>
+${parts.map((p) => "    " + p).join("\n")}
+  </g>
+</svg>
+`;
+}
+
+/** Export PNG from the live canvas (preserves the exact rendered look). */
+export function exportPng(canvas: HTMLCanvasElement, name = "mosaic.png") {
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    download(name, blob, "image/png");
+  }, "image/png");
+}
+
+/** Export HTML (download). */
+export function exportHtml(meta: ExportMeta, name = "mosaic.html") {
+  download(name, buildHtmlString(meta), "text/html");
+}
+
+/** Copy HTML to clipboard. Returns success. */
+export async function copyHtml(meta: ExportMeta): Promise<boolean> {
+  return copyToClipboard(buildHtmlString(meta));
+}
+
+/** Export CSS (download). */
+export function exportCss(meta: ExportMeta, name = "mosaic.css") {
+  download(name, buildCssString(meta), "text/css");
+}
+
+/** Copy CSS to clipboard. */
+export async function copyCss(meta: ExportMeta): Promise<boolean> {
+  return copyToClipboard(buildCssString(meta));
+}
+
+/** Export JSON (download). */
+export function exportJson(meta: ExportMeta, name = "mosaic.json") {
+  download(name, buildJsonString(meta), "application/json");
+}
+
+/** Copy JSON to clipboard. */
+export async function copyJson(meta: ExportMeta): Promise<boolean> {
+  return copyToClipboard(buildJsonString(meta));
 }
 
 /** ASCII export — terminal-friendly, downsamples to ~120 cols. */
@@ -206,41 +280,14 @@ export function exportAscii(meta: ExportMeta, name = "mosaic.txt") {
   download(name, lines.join("\n"), "text/plain");
 }
 
-/** SVG export — true vector mosaic. Each cell becomes a shape element. */
+/** SVG export — download. */
 export function exportSvg(meta: ExportMeta, name = "mosaic.svg") {
-  const { width, height, cells, background, shape, shapeSize, rotation = 0, jitter = 0, seed = 1, filter = "none" } = meta;
-  const bg = background ? rgbToHex(background) : "transparent";
-  // Simple seeded RNG for jitter (mulberry32)
-  let a = (seed >>> 0) || 1;
-  const rand = () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  const fillFraction = Math.max(0.05, Math.min(1, shapeSize));
-  const parts: string[] = cells.map((c) => {
-    const s = Math.min(c.w, c.h);
-    const gap = (1 - fillFraction) * (s / 2);
-    const j = jitter * (rand() - 0.5) * s * 0.3;
-    const jr = jitter * (rand() - 0.5) * 40;
-    const hex = rgbToHex(c.color);
-    const useShape = (c.shape ?? shape) as ShapeKind;
-    return shapeToSvg(useShape, c.x + (rand() - 0.5) * j, c.y + (rand() - 0.5) * j, s, hex, gap, rotation + jr);
-  });
+  download(name, buildSvgString(meta), "image/svg+xml");
+}
 
-  const { filterDefs, filterAttr } = buildSvgFilter(filter);
-
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision">
-  <defs>${filterDefs}</defs>
-  <rect width="${width}" height="${height}" fill="${bg}"/>
-  <g${filterAttr}>
-${parts.map((p) => "    " + p).join("\n")}
-  </g>
-</svg>
-`;
-  download(name, svg, "image/svg+xml");
+/** Copy SVG to clipboard. */
+export async function copySvg(meta: ExportMeta): Promise<boolean> {
+  return copyToClipboard(buildSvgString(meta));
 }
 
 /** Build an SVG `<filter>` definition for the given effect kind. */

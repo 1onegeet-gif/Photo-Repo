@@ -335,6 +335,9 @@ export default function Home() {
               <Shortcut keys={["O"]} label="Peek original" />
               <Shortcut keys={["C"]} label="Compare slider" />
               <Shortcut keys={["I"]} label="Inspect cells" />
+              <Shortcut keys={["X"]} label="Flip horizontal" />
+              <Shortcut keys={["Y"]} label="Flip vertical" />
+              <Shortcut keys={["T"]} label="Rotate 90°" />
               <Shortcut keys={["R"]} label="Reseed" />
               <Shortcut keys={["U"]} label="Undo" />
               <Shortcut keys={["⇧","U"]} label="Redo" />

@@ -1097,3 +1097,78 @@ a:focus-visible {
     display: none !important;
   }
 }
+
+/* ----------------------------------------------------------------
+   Export button — copy icon refined hover
+----------------------------------------------------------------- */
+.export-copy-btn {
+  opacity: 0;
+  transition: opacity 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+.export-card:hover .export-copy-btn {
+  opacity: 1;
+}
+.export-copy-btn:hover {
+  transform: scale(1.1);
+}
+
+/* ----------------------------------------------------------------
+   Refined scrollbar for horizontal trays
+----------------------------------------------------------------- */
+.scroll-x-fancy {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.78 0.04 70 / 0.5) transparent;
+}
+.scroll-x-fancy::-webkit-scrollbar {
+  height: 4px;
+}
+.scroll-x-fancy::-webkit-scrollbar-thumb {
+  background: oklch(0.78 0.04 70 / 0.5);
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------
+   Subtle entrance for sections (staggered)
+----------------------------------------------------------------- */
+@keyframes section-rise {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.section-rise {
+  animation: section-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ----------------------------------------------------------------
+   Kanji watermark — refined with drop shadow
+----------------------------------------------------------------- */
+.kanji-watermark {
+  text-shadow:
+    0 0 4px oklch(0.97 0.014 85 / 0.8),
+    0 1px 2px oklch(0.97 0.014 85 / 0.6);
+}
+
+/* ----------------------------------------------------------------
+   Better reduced-motion support
+----------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .enso-animated,
+  .help-btn,
+  .compare-handle-knob,
+  .transform-badge,
+  .mean-line,
+  .histogram-bar,
+  .levels-bar,
+  .ink-loader::after,
+  .upload-dragging,
+  .stat-pulse,
+  .brush-in {
+    animation: none !important;
+  }
+}

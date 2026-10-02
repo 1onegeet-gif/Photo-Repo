@@ -103,6 +103,18 @@ export function useKeyboardShortcuts() {
           e.preventDefault();
           s.setHelpOpen(!s.helpOpen);
           break;
+        case "x":
+          e.preventDefault();
+          s.flipH();
+          break;
+        case "y":
+          e.preventDefault();
+          s.flipV();
+          break;
+        case "t":
+          e.preventDefault();
+          s.rotate90();
+          break;
       }
     };
     window.addEventListener("keydown", handler);

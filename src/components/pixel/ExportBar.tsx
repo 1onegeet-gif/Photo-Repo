@@ -8,6 +8,10 @@ import {
   exportJson,
   exportPng,
   exportSvg,
+  copySvg,
+  copyHtml,
+  copyCss,
+  copyJson,
   ExportMeta,
   SvgFilterKind,
 } from "@/lib/export";
@@ -22,6 +26,7 @@ import {
   Spline,
   Layers,
   Sparkles,
+  Copy,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -123,6 +128,41 @@ export function ExportBar({ displayRef }: ExportBarProps) {
     wrap("ascii", () => exportAscii(meta, `mosaic-${slug(s.fileName)}.txt`));
   };
 
+  // --- Copy-to-clipboard handlers ---
+  const wrapCopy = async (name: string, fn: () => Promise<boolean>) => {
+    setPending("copy-" + name);
+    try {
+      const ok = await fn();
+      if (ok) toast.success(`${name.toUpperCase()} copied to clipboard`);
+      else toast.error("Clipboard not available — use download instead");
+    } catch (e) {
+      toast.error(`Copy failed: ${(e as Error).message}`);
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const handleCopySvg = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    wrapCopy("svg", () => copySvg(meta));
+  };
+  const handleCopyHtml = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    wrapCopy("html", () => copyHtml(meta));
+  };
+  const handleCopyCss = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    wrapCopy("css", () => copyCss(meta));
+  };
+  const handleCopyJson = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    wrapCopy("json", () => copyJson(meta));
+  };
+
   const handleBatch = async () => {
     const meta = await gather();
     if (!meta) return;
@@ -168,6 +208,8 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           icon={<Spline className="h-4 w-4" />}
           pending={pending === "svg"}
           onClick={handleSvg}
+          onCopy={handleCopySvg}
+          copyPending={pending === "copy-svg"}
         />
         <ExportButton
           label="HTML"
@@ -175,6 +217,8 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           icon={<Code2 className="h-4 w-4" />}
           pending={pending === "html"}
           onClick={handleHtml}
+          onCopy={handleCopyHtml}
+          copyPending={pending === "copy-html"}
         />
         <ExportButton
           label="CSS"
@@ -182,6 +226,8 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           icon={<Code2 className="h-4 w-4" />}
           pending={pending === "css"}
           onClick={handleCss}
+          onCopy={handleCopyCss}
+          copyPending={pending === "copy-css"}
         />
         <ExportButton
           label="JSON"
@@ -189,6 +235,8 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           icon={<Braces className="h-4 w-4" />}
           pending={pending === "json"}
           onClick={handleJson}
+          onCopy={handleCopyJson}
+          copyPending={pending === "copy-json"}
         />
         <ExportButton
           label="ASCII"
@@ -259,31 +307,52 @@ function ExportButton({
   jp,
   icon,
   onClick,
+  onCopy,
   pending,
+  copyPending,
 }: {
   label: string;
   jp: string;
   icon: React.ReactNode;
   onClick: () => void;
+  onCopy?: () => void;
   pending: boolean;
+  copyPending?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      className="group flex flex-col items-center justify-center gap-1 rounded-md border border-border/70 bg-paper/60 px-2 py-3 transition-all hover:border-seal/60 hover:bg-paper disabled:opacity-60"
-    >
-      <span className="text-foreground/80 transition-colors group-hover:text-seal">
-        {icon}
-      </span>
-      <span className="font-display text-xs font-semibold tracking-wide">
-        {label}
-      </span>
-      <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">
-        {jp}
-      </span>
-    </button>
+    <div className="export-card group relative flex flex-col items-center justify-center gap-1 rounded-md border border-border/70 bg-paper/60 px-2 py-3 transition-all hover:border-seal/60 hover:bg-paper">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={pending || copyPending}
+        className="flex flex-col items-center gap-1 disabled:opacity-60"
+      >
+        <span className="text-foreground/80 transition-colors group-hover:text-seal">
+          {icon}
+        </span>
+        <span className="font-display text-xs font-semibold tracking-wide">
+          {label}
+        </span>
+        <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">
+          {jp}
+        </span>
+      </button>
+      {onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={pending || copyPending}
+          title="Copy to clipboard"
+          aria-label={`Copy ${label} to clipboard`}
+          className={cn(
+            "export-copy-btn absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded text-muted-foreground/40 transition-all hover:bg-seal/10 hover:text-seal disabled:opacity-40",
+            copyPending && "animate-pulse text-seal opacity-100",
+          )}
+        >
+          <Copy className="h-3 w-3" />
+        </button>
+      )}
+    </div>
   );
 }
 
