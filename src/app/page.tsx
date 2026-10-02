@@ -15,6 +15,9 @@ import { StatsPanel, Stats } from "@/components/pixel/StatsPanel";
 import { TransformBar } from "@/components/pixel/TransformBar";
 import { CustomPresetBar } from "@/components/pixel/CustomPresetBar";
 import { HelpOverlay } from "@/components/pixel/HelpOverlay";
+import { LevelsPanel } from "@/components/pixel/LevelsPanel";
+import { ImageTray } from "@/components/pixel/ImageTray";
+import { useImageTray, makeThumb, TrayImage } from "@/lib/useImageTray";
 import { useMosaic } from "@/lib/mosaic-store";
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useUrlState } from "@/lib/useUrlState";
@@ -47,6 +50,12 @@ export default function Home() {
 
   // Apply transform to the source canvas from the original image.
   // Called on image load AND whenever the transform changes.
+  // Uses a ref synced via effect to avoid stale closures + re-render loops.
+  const transformRef = useRef(state.transform);
+  useEffect(() => {
+    transformRef.current = state.transform;
+  }, [state.transform]);
+
   const applyTransform = useCallback(() => {
     const img = originalImgRef.current;
     const src = sourceRef.current;
@@ -58,7 +67,7 @@ export default function Home() {
     w = Math.round(w * scale);
     h = Math.round(h * scale);
 
-    const { flipH, flipV, rotate90 } = state.transform;
+    const { flipH, flipV, rotate90 } = transformRef.current;
     // Swap dimensions if rotated 90/270
     const rotated = rotate90 === 90 || rotate90 === 270;
     const outW = rotated ? h : w;
@@ -78,26 +87,68 @@ export default function Home() {
     requestAnimationFrame(() => state.setShowOriginal(false));
   }, [state]);
 
+  const trayAdd = useImageTray((s) => s.add);
+  const traySetActive = useImageTray((s) => s.setActive);
+
   const onImage = useCallback(
     (img: HTMLImageElement, name: string) => {
       originalImgRef.current = img;
       state.resetTransform();
-      // applyTransform reads originalImgRef + state.transform (now identity)
-      // Defer one tick so resetTransform has flushed
+      // Defer one tick so resetTransform has flushed to the ref
       requestAnimationFrame(() => {
-        // Set name first
         state.setHasImage(true, 1, 1, name);
         applyTransform();
       });
+      // Add to image tray (async thumbnail generation)
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      // Draw to a temp canvas to get a data URL
+      const tmp = document.createElement("canvas");
+      const scale = Math.min(1, 900 / Math.max(w, h));
+      tmp.width = Math.round(w * scale);
+      tmp.height = Math.round(h * scale);
+      const tctx = tmp.getContext("2d");
+      if (tctx) {
+        tctx.drawImage(img, 0, 0, tmp.width, tmp.height);
+        const dataUrl = tmp.toDataURL("image/png");
+        const id = `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        makeThumb(dataUrl, 80).then((thumb) => {
+          trayAdd({
+            id,
+            dataUrl,
+            name,
+            width: tmp.width,
+            height: tmp.height,
+            thumb,
+          });
+          traySetActive(id);
+        });
+      }
+    },
+    [state, applyTransform, trayAdd, traySetActive],
+  );
+
+  const onPickFromTray = useCallback(
+    (trayImg: TrayImage) => {
+      const img = new Image();
+      img.onload = () => {
+        originalImgRef.current = img;
+        state.resetTransform();
+        requestAnimationFrame(() => {
+          state.setHasImage(true, 1, 1, trayImg.name);
+          applyTransform();
+        });
+      };
+      img.src = trayImg.dataUrl;
     },
     [state, applyTransform],
   );
 
-  // Re-apply transform whenever transform changes
+  // Re-apply transform whenever transform changes (reads from ref, no loop risk)
   useEffect(() => {
     if (!originalImgRef.current) return;
     applyTransform();
-  }, [state.transform.flipH, state.transform.flipV, state.transform.rotate90]);
+  }, [state.transform.flipH, state.transform.flipV, state.transform.rotate90, applyTransform]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -138,6 +189,9 @@ export default function Home() {
           <span className="seigaiha-corner tl" aria-hidden />
           <span className="seigaiha-corner br" aria-hidden />
           <UploadZone onImage={onImage} samples={SAMPLES} />
+          <div className="mt-3">
+            <ImageTray onPick={onPickFromTray} />
+          </div>
         </section>
 
         {/* Presets */}
@@ -173,6 +227,15 @@ export default function Home() {
             <div className="matte-card washi-texture rounded-lg p-4">
               <StatsPanel
                 stats={stats}
+                width={state.sourceWidth}
+                height={state.sourceHeight}
+              />
+            </div>
+            {/* Levels panel — source image RGB histogram */}
+            <div className="matte-card washi-texture rounded-lg p-4">
+              <LevelsPanel
+                sourceRef={sourceRef}
+                hasImage={state.hasImage}
                 width={state.sourceWidth}
                 height={state.sourceHeight}
               />

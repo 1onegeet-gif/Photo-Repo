@@ -1000,3 +1000,100 @@ kbd.kbd {
   mix-blend-mode: multiply;
   pointer-events: none;
 }
+
+/* ----------------------------------------------------------------
+   Image tray — thumbnail tiles
+----------------------------------------------------------------- */
+.tray-tile {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.18s ease;
+}
+.tray-tile:hover {
+  transform: translateY(-2px);
+}
+
+/* ----------------------------------------------------------------
+   Levels histogram bar — grow-in animation
+----------------------------------------------------------------- */
+@keyframes bar-grow {
+  0% { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+.levels-bar {
+  transform-origin: bottom;
+  animation: bar-grow 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ----------------------------------------------------------------
+   Mean line pulse — for levels histogram
+----------------------------------------------------------------- */
+@keyframes mean-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+.mean-line {
+  animation: mean-pulse 2s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------
+   Refined focus ring for buttons
+----------------------------------------------------------------- */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid oklch(0.55 0.18 32 / 0.7);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------------
+   Subtle hover lift for all matte cards
+----------------------------------------------------------------- */
+.matte-card {
+  transition: box-shadow 0.3s ease;
+}
+.matte-card:hover {
+  box-shadow:
+    0 1px 0 0 oklch(0.82 0.03 75 / 0.6),
+    0 1px 2px 0 oklch(0.5 0.03 60 / 0.08),
+    0 14px 36px -14px oklch(0.4 0.04 50 / 0.22);
+}
+
+/* ----------------------------------------------------------------
+   Responsive: tighter spacing on mobile
+----------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .matte-card {
+    border-radius: 8px;
+  }
+  .seigaiha-corner {
+    width: 40px;
+    height: 40px;
+  }
+  .hanko {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    bottom: 8px;
+    right: 8px;
+  }
+  .kanji-watermark {
+    font-size: 11px;
+    top: 10px;
+    left: 10px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Print-friendly (for ASCII export preview)
+----------------------------------------------------------------- */
+@media print {
+  .matte-card,
+  .washi-texture::before,
+  .washi-texture::after {
+    box-shadow: none !important;
+    background: white !important;
+  }
+  header, footer, aside, .seigaiha-corner, .hanko, .kanji-watermark {
+    display: none !important;
+  }
+}

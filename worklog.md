@@ -342,3 +342,63 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired
 - Could add: multi-image gallery, drag-to-resize canvas, image histogram/levels panel, animated GIF export, tile-based large image tiling
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 13 (cron round 5)
+Agent: main (Z.ai Code)
+Task: Code review fixes + add image levels histogram, multi-image tray, styling polish
+
+Work Log:
+- QA check: dev server STILL down (3rd round in a row). Verified all code via lint + tsc.
+- Code review fix: TransformBar applyTransform was using `state.transform` directly in useCallback, risking stale closures + re-render loops.
+  - Fix: added `transformRef` synced via useEffect, applyTransform reads from ref
+  - Added `applyTransform` to the transform-change useEffect deps
+  - This prevents stale closure bugs when flipping/rotating rapidly
+- Added image levels/histogram panel:
+  - `LevelsPanel` component: computes 32-bucket histograms for R, G, B, L (luminance) channels from source canvas
+  - Each channel shows a bar histogram with mean (μ) line, channel color dot, kanji label (赤/緑/青/輝度)
+  - Debounced 200ms to avoid thrashing; derived display state to avoid setState-in-effect lint error
+  - Stride sampling for performance on large images
+  - Wired into page below StatsPanel
+- Added multi-image gallery (tray):
+  - `useImageTray` Zustand store: holds up to 6 recent images (data URL + thumbnail + metadata), dedupes by name+dimensions
+  - `makeThumb()` async helper generates 80px JPEG thumbnails
+  - `ImageTray` component: horizontal scroll of 40×40 thumbnails with active border, hover lift, remove button (hover-reveal)
+  - page.tsx: onImage now adds to tray; onPickFromTray reloads from tray data URL
+  - Wired into upload section below the drop zone
+- Styling polish in globals.css:
+  - Image tray tile hover lift (`.tray-tile`)
+  - Levels histogram bar grow-in animation (`.levels-bar` with staggered delay)
+  - Mean line pulse animation (`.mean-line`)
+  - Refined focus-visible rings for all buttons/links
+  - Matte card hover lift (deeper shadow on hover)
+  - Responsive: tighter spacing on mobile (smaller seigaiha corners, hanko, kanji watermark)
+  - Print-friendly media query (hides ornaments, flattens cards)
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code)
+- agent-browser verification: DEFERRED — dev server down entire session (3rd consecutive round). Code verified via lint + tsc.
+
+Stage Summary:
+- Round 5 complete: 1 bug fix (transform stale closure), 2 new features (image levels histogram, multi-image tray), extensive styling polish (bar grow-in, mean pulse, card hover lift, responsive, print)
+- Code verified via lint + tsc; browser QA pending dev server recovery
+- Total: 16 built-in + custom localStorage presets (with export/import), 6 export formats (6 SVG filter variants), 15 keyboard shortcuts, compare/inspect/eyedropper/lightbox/transform/levels/tray modes
+
+---
+Current project status description/assessment (post round 5)
+- Mosaic Atelier now has: 16 built-in + custom localStorage presets (with export/import), 6 export formats (PNG/SVG/HTML/CSS/JSON/ASCII) with 6 SVG filter variants, before/after compare, cell inspect + eyedropper, URL state share, batch export, lightbox, undo/redo, live stats with color frequency histogram, image levels histogram (RGB+L), palette lock, shape mix, Bayer dithering, image transforms (flip/rotate), multi-image tray (6 recent), help/onboarding overlay, 15 keyboard shortcuts
+- Aesthetic: cream washi paper with animated enso, seigaiha corners, hanko seal, kanji watermark, ink-underline nav, sample hover dots, stat-pulse, compare pulse, deckle edges, asanoha pattern, toast stamp-in, scroll-reveal, header gradient strip, modal animations, histogram shimmer, badge pulses, kanji dividers, preset kanji stamps, filter chip rings, skeleton shimmer, paper grain, levels bar grow-in, mean pulse, card hover lift, responsive mobile sizing, print-friendly
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 5)
+- DONE: transform stale-closure fix, image levels histogram panel, multi-image tray, styling polish (levels bar animation, mean pulse, card hover lift, responsive, print)
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down 3rd consecutive round)
+
+Unresolved issues or risks, priority recommendations for next phase
+- **CRITICAL: dev server has been down for 3 consecutive rounds (rounds 3, 4, 5)** — next round MUST verify it's back up and run full agent-browser QA on ALL features from rounds 3-5. If still down, consider it a persistent environment issue.
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: drag-to-resize canvas, animated GIF/frames export, tile-based large image tiling, color picker eyedropper for source image (not just cells)
+- The recurring 15-min webDevReview cron will continue iterating
