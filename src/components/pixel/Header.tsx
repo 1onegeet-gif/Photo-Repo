@@ -1,12 +1,14 @@
 "use client";
 
-import { Brush } from "lucide-react";
+import { Brush, HelpCircle } from "lucide-react";
 import { HistoryControls } from "./HistoryControls";
 import { ShareButton } from "./ShareButton";
+import { useMosaic } from "@/lib/mosaic-store";
 
 export function Header() {
+  const setHelpOpen = useMosaic((s) => s.setHelpOpen);
   return (
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-paper/80 backdrop-blur-md">
+    <header className="header-strip sticky top-0 z-30 border-b border-border/50 bg-paper/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <div className="seal-stamp flex h-9 w-9 items-center justify-center text-[11px]">
@@ -43,6 +45,15 @@ export function Header() {
           <div className="mx-1 hidden h-5 w-px bg-border/60 sm:block" />
           <HistoryControls />
           <ShareButton />
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="help-btn flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-paper hover:text-seal"
+            aria-label="Help"
+            title="Help (?)"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
           <span
             className="ml-1 hidden items-center gap-1 rounded-full border border-border/70 bg-paper/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:inline-flex"
           >

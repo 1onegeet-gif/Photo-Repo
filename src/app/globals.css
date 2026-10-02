@@ -757,3 +757,139 @@ kbd.kbd {
 [data-sonner-toast] {
   animation: stamp-down 0.3s cubic-bezier(0.22, 1, 0.36, 1) both !important;
 }
+
+/* ----------------------------------------------------------------
+   Scroll reveal — fade-in-up as elements enter the viewport.
+   Apply `.reveal` to any element; it animates when `.is-visible` is added.
+----------------------------------------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------
+   Header gradient strip — a subtle vermillion→gold wash under the header
+----------------------------------------------------------------- */
+.header-strip {
+  position: relative;
+}
+.header-strip::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.55 0.18 32 / 0) 8%,
+    oklch(0.55 0.18 32 / 0.5) 30%,
+    oklch(0.72 0.12 70 / 0.5) 50%,
+    oklch(0.55 0.18 32 / 0.5) 70%,
+    oklch(0.55 0.18 32 / 0) 92%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------
+   Section number badge — for how-to cards
+----------------------------------------------------------------- */
+.section-num {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: oklch(0.55 0.18 32);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------
+   Floating action ripple — for the help button
+----------------------------------------------------------------- */
+@keyframes help-ripple {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.18 32 / 0.3); }
+  50% { box-shadow: 0 0 0 5px oklch(0.55 0.18 32 / 0); }
+}
+.help-btn {
+  animation: help-ripple 2.4s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------
+   Histogram bar shimmer — subtle horizontal sweep
+----------------------------------------------------------------- */
+@keyframes bar-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.histogram-bar {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.97 0.014 85 / 0.25),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: bar-shimmer 3s linear infinite;
+}
+
+/* ----------------------------------------------------------------
+   Preset tile inner glow on hover
+----------------------------------------------------------------- */
+.preset-card .preset-thumb {
+  transition: filter 0.25s ease;
+}
+.preset-card:hover .preset-thumb {
+  filter: brightness(1.05) saturate(1.08);
+}
+
+/* ----------------------------------------------------------------
+   Custom preset card — star stamp
+----------------------------------------------------------------- */
+.custom-preset-star {
+  filter: drop-shadow(0 1px 2px oklch(0.55 0.18 32 / 0.3));
+}
+
+/* ----------------------------------------------------------------
+   Modal fade-in backdrop
+----------------------------------------------------------------- */
+@keyframes backdrop-fade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.modal-backdrop {
+  animation: backdrop-fade 0.25s ease-out both;
+}
+@keyframes modal-pop {
+  0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-pop {
+  animation: modal-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ----------------------------------------------------------------
+   Transform button badge pulse
+----------------------------------------------------------------- */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.transform-badge {
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------
+   Upload zone drag-over glow
+----------------------------------------------------------------- */
+@keyframes upload-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.18 32 / 0.2); }
+  50% { box-shadow: 0 0 0 8px oklch(0.55 0.18 32 / 0); }
+}
+.upload-dragging {
+  animation: upload-glow 1.2s ease-in-out infinite;
+}

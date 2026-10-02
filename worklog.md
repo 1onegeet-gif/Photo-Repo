@@ -215,3 +215,72 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired (light-only fits the cream aesthetic)
 - Could add: preset favoriting, color frequency histogram, save/load named presets to localStorage, SVG filter effects (blur/emboss), multi-image gallery, drag-to-resize canvas
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 11 (cron round 3)
+Agent: main (Z.ai Code)
+Task: QA review + add color histogram, localStorage presets, image transforms, help overlay, styling polish
+
+Work Log:
+- QA via agent-browser: page healthy, lint clean. VLM reported a "N badge" but DOM verification confirmed it's a VLM hallucination (no such element exists; Next.js dev indicator is hidden via CSS). Truncation was also a false positive.
+- Added color frequency histogram to StatsPanel:
+  - Extended `Stats` interface with `colorFreq: ColorEntry[]` (hex + count + pct)
+  - MosaicCanvas now counts color occurrences across all cells, sorts desc, passes top 32
+  - StatsPanel renders horizontal bar histogram (top 12 colors) with proportional bars tinted by each color, percentage labels, stat-pulse animation on bar changes
+- Added localStorage custom presets:
+  - `useCustomPresets` hook (lazy-initialized from localStorage, add/remove/rename, 24-cap, auto-save)
+  - `CustomPresetBar` component: "Save current" button → name input → saves snapshot of all renderable params; grid of saved preset cards with apply + delete (hover-reveal trash)
+  - Wired into page.tsx as its own section below the preset gallery
+- Added image transform tools:
+  - Store: `transform: { flipH, flipV, rotate90 }` + `setTransform`, `flipH`, `flipV`, `rotate90`, `resetTransform` actions
+  - `TransformBar` component: 4 buttons (Flip H, Flip V, Rotate CW, Rotate CCW) with active states + rotation degree badge
+  - page.tsx: refactored `onImage` to keep `originalImgRef` (HTMLImageElement); `applyTransform()` re-draws source canvas with flip+rotate matrix; useEffect re-applies on transform change
+  - Handles dimension swap for 90°/270° rotations
+- Added help/onboarding overlay:
+  - Store: `helpOpen` + `setHelpOpen`
+  - `HelpOverlay` component: modal with 4-step tour (Bring image → Pick preset → Compare/inspect → Export), washi-tape header, seigaiha corners, "Begin" button, Esc to close
+  - Help button in header (help-btn ripple animation)
+  - `?` and `H` keyboard shortcuts to toggle
+- Styling polish in globals.css:
+  - Scroll-reveal: `.reveal` + `.is-visible` classes with fade-in-up transition
+  - `useScrollReveal` hook using IntersectionObserver
+  - Applied to HowCard components
+  - Header gradient strip (`.header-strip`): vermillion→gold wash under header
+  - Section number badge (`.section-num`) styling
+  - Help button ripple animation (`.help-btn`)
+  - Histogram bar shimmer (`.histogram-bar`)
+  - Preset tile hover brightness/saturation filter
+  - Modal backdrop fade + modal pop animations (`.modal-backdrop`, `.modal-pop`) applied to HelpOverlay
+  - Transform badge pulse animation (`.transform-badge`)
+  - Upload drag-over glow (`.upload-dragging`)
+- Added `?` / `H` shortcut to the cheat-sheet (now 15 shortcuts)
+- Fixed lucide-react import: `Reset` → `RefreshCcw` (Reset doesn't exist in lucide-react)
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code; only pre-existing errors in examples/skills folders)
+- agent-browser verification: dev server became unreachable mid-session (process died, not auto-restarting in cron context). Code verified correct via lint + tsc. Browser QA deferred to next round.
+- Code review confirms all new components are correctly wired in page.tsx (TransformBar, CustomPresetBar, HelpOverlay, StatsPanel with histogram)
+
+Stage Summary:
+- Round 3 complete: 4 new features (color histogram, localStorage presets, image transforms, help overlay) + extensive styling polish (scroll reveal, header strip, modal animations, shimmer effects, badge pulses)
+- 16 presets + custom localStorage presets, 6 export formats, 15 keyboard shortcuts
+- Code verified via lint + tsc; browser QA pending dev server recovery
+
+---
+Current project status description/assessment (post round 3)
+- Mosaic Atelier now has: 16 built-in presets + custom localStorage presets, 6 export formats, before/after compare, cell inspect, URL state share, batch export, lightbox, undo/redo, live stats with color frequency histogram, palette lock, shape mix, Bayer dithering, image transforms (flip/rotate), help/onboarding overlay, 15 keyboard shortcuts
+- Aesthetic: cream washi paper with animated enso, seigaiha corners, hanko seal, kanji watermark, ink-underline nav, sample hover dots, stat-pulse, compare pulse, deckle edges, asanoha pattern, toast stamp-in, scroll-reveal, header gradient strip, modal animations, histogram shimmer, badge pulses
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 3)
+- DONE: color frequency histogram, localStorage custom presets, image transforms (flip/rotate), help overlay, scroll-reveal, header strip, modal animations, transform badges, histogram shimmer
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down in cron context)
+
+Unresolved issues or risks, priority recommendations for next phase
+- Dev server process died during this round — next round should verify it's back and run full agent-browser QA
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: SVG filter effects (blur/emboss/posterize), multi-image gallery, drag-to-resize canvas, color picker eyedropper, preset export/import as JSON file
+- The recurring 15-min webDevReview cron will continue iterating

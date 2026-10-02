@@ -8,11 +8,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { rgbToHex } from "@/lib/color";
+import type { Stats } from "./StatsPanel";
 
 interface MosaicCanvasProps {
   sourceRef: React.RefObject<HTMLCanvasElement | null>;
   displayRef: React.RefObject<HTMLCanvasElement | null>;
-  onStats?: (stats: { cells: number; renderMs: number; palette: string[] }) => void;
+  onStats?: (stats: Stats) => void;
 }
 
 interface HoverInfo {
@@ -100,21 +101,25 @@ export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasPro
     setCells(newCells);
     setBusy(false);
 
-    // Emit stats
+    // Emit stats (with color frequency)
     if (onStats) {
-      const paletteSet = new Set<string>();
+      const counts = new Map<string, number>();
       for (const c of newCells) {
-        paletteSet.add(
-          `#${[c.color[0], c.color[1], c.color[2]]
-            .map((v) => (v | 0).toString(16).padStart(2, "0"))
-            .join("")}`,
-        );
-        if (paletteSet.size > 64) break;
+        const hex = `#${[c.color[0], c.color[1], c.color[2]]
+          .map((v) => (v | 0).toString(16).padStart(2, "0"))
+          .join("")}`;
+        counts.set(hex, (counts.get(hex) ?? 0) + 1);
       }
+      const total = newCells.length || 1;
+      const colorFreq = Array.from(counts.entries())
+        .map(([hex, count]) => ({ hex, count, pct: count / total }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 32);
       onStats({
         cells: newCells.length,
         renderMs,
-        palette: Array.from(paletteSet),
+        palette: Array.from(counts.keys()),
+        colorFreq,
       });
     }
   }, [displayRef, sourceRef, state, onStats]);

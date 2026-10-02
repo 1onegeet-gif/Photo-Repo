@@ -98,6 +98,11 @@ export function useKeyboardShortcuts() {
           e.preventDefault();
           s.setInspectMode(!s.inspectMode);
           break;
+        case "?":
+        case "h":
+          e.preventDefault();
+          s.setHelpOpen(!s.helpOpen);
+          break;
       }
     };
     window.addEventListener("keydown", handler);

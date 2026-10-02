@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { Header } from "@/components/pixel/Header";
 import { Footer } from "@/components/pixel/Footer";
 import { UploadZone, MAX_DIM } from "@/components/pixel/UploadZone";
@@ -12,9 +12,13 @@ import { PresetGallery } from "@/components/pixel/PresetGallery";
 import { PaletteLockPanel } from "@/components/pixel/PaletteLockPanel";
 import { ShapeMixPanel } from "@/components/pixel/ShapeMixPanel";
 import { StatsPanel, Stats } from "@/components/pixel/StatsPanel";
+import { TransformBar } from "@/components/pixel/TransformBar";
+import { CustomPresetBar } from "@/components/pixel/CustomPresetBar";
+import { HelpOverlay } from "@/components/pixel/HelpOverlay";
 import { useMosaic } from "@/lib/mosaic-store";
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useUrlState } from "@/lib/useUrlState";
+import { useScrollReveal } from "@/lib/useScrollReveal";
 import {
   Download,
   BookOpen,
@@ -32,6 +36,7 @@ const SAMPLES = [
 export default function Home() {
   const sourceRef = useRef<HTMLCanvasElement | null>(null);
   const displayRef = useRef<HTMLCanvasElement | null>(null);
+  const originalImgRef = useRef<HTMLImageElement | null>(null);
   const state = useMosaic();
   const [stats, setStats] = useState<Stats | null>(null);
 
@@ -40,34 +45,59 @@ export default function Home() {
   // Sync params to URL hash for shareable configs
   useUrlState();
 
+  // Apply transform to the source canvas from the original image.
+  // Called on image load AND whenever the transform changes.
+  const applyTransform = useCallback(() => {
+    const img = originalImgRef.current;
+    const src = sourceRef.current;
+    if (!img || !src) return;
+    let w = img.naturalWidth || img.width;
+    let h = img.naturalHeight || img.height;
+    const maxDim = MAX_DIM;
+    const scale = Math.min(1, maxDim / Math.max(w, h));
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+
+    const { flipH, flipV, rotate90 } = state.transform;
+    // Swap dimensions if rotated 90/270
+    const rotated = rotate90 === 90 || rotate90 === 270;
+    const outW = rotated ? h : w;
+    const outH = rotated ? w : h;
+    src.width = outW;
+    src.height = outH;
+    const sctx = src.getContext("2d", { willReadFrequently: true });
+    if (!sctx) return;
+    sctx.clearRect(0, 0, outW, outH);
+    sctx.save();
+    sctx.translate(outW / 2, outH / 2);
+    sctx.rotate((rotate90 * Math.PI) / 180);
+    sctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+    sctx.drawImage(img, -w / 2, -h / 2, w, h);
+    sctx.restore();
+    state.setHasImage(true, outW, outH, state.fileName || "image");
+    requestAnimationFrame(() => state.setShowOriginal(false));
+  }, [state]);
+
   const onImage = useCallback(
     (img: HTMLImageElement, name: string) => {
-      let w = img.naturalWidth || img.width;
-      let h = img.naturalHeight || img.height;
-      const maxDim = MAX_DIM;
-      const scale = Math.min(1, maxDim / Math.max(w, h));
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-
-      // Source canvas — hidden, holds the working image
-      const src = sourceRef.current;
-      if (!src) return;
-      src.width = w;
-      src.height = h;
-      const sctx = src.getContext("2d", { willReadFrequently: true });
-      if (!sctx) return;
-      sctx.clearRect(0, 0, w, h);
-      sctx.drawImage(img, 0, 0, w, h);
-
-      state.setHasImage(true, w, h, name);
-
-      // Wait one tick so MosaicCanvas effect picks up new dimensions
+      originalImgRef.current = img;
+      state.resetTransform();
+      // applyTransform reads originalImgRef + state.transform (now identity)
+      // Defer one tick so resetTransform has flushed
       requestAnimationFrame(() => {
-        state.setShowOriginal(false);
+        // Set name first
+        state.setHasImage(true, 1, 1, name);
+        applyTransform();
       });
     },
-    [state],
+    [state, applyTransform],
   );
+
+  // Re-apply transform whenever transform changes
+  useEffect(() => {
+    if (!originalImgRef.current) return;
+    applyTransform();
+  }, [state.transform.flipH, state.transform.flipV, state.transform.rotate90]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -126,6 +156,11 @@ export default function Home() {
           </PanelSection>
         </section>
 
+        {/* Custom presets (localStorage) */}
+        <section className="matte-card washi-texture rounded-lg p-4">
+          <CustomPresetBar />
+        </section>
+
         {/* Workspace: canvas + controls */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           <div className="flex flex-col gap-4">
@@ -146,6 +181,9 @@ export default function Home() {
           <aside className="lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto lg:pr-1">
             <div className="matte-card washi-texture rounded-lg p-4">
               <ControlPanel />
+              <div className="mt-6">
+                <TransformBar />
+              </div>
               <div className="mt-6">
                 <ShapeMixPanel />
               </div>
@@ -228,11 +266,15 @@ export default function Home() {
               <Shortcut keys={["U"]} label="Undo" />
               <Shortcut keys={["⇧","U"]} label="Redo" />
               <Shortcut keys={["P"]} label="Jump to presets" />
+              <Shortcut keys={["?"]} label="Toggle help" />
             </div>
           </PanelSection>
         </section>
       </main>
       <Footer />
+
+      {/* Help overlay (first-time onboarding) */}
+      <HelpOverlay />
 
       {/* Hidden source canvas — holds the working image data */}
       <canvas ref={sourceRef} className="hidden" aria-hidden="true" />
@@ -253,13 +295,17 @@ function HowCard({
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const ref = useScrollReveal<HTMLElement>();
   return (
-    <article className="matte-card washi-texture relative overflow-hidden rounded-lg p-5">
+    <article
+      ref={ref}
+      className="reveal matte-card washi-texture relative overflow-hidden rounded-lg p-5"
+    >
       <span className="seigaiha-corner tr" aria-hidden />
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-seal">
           {icon}
-          <span className="font-mono text-xs tracking-widest">{n}</span>
+          <span className="section-num">{n}</span>
         </div>
         <span className="font-display text-xs tracking-[0.3em] text-muted-foreground">
           {jp}
