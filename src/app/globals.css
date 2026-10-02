@@ -1245,3 +1245,88 @@ a:focus-visible {
   0%, 100% { box-shadow: 0 0 0 2px oklch(0.55 0.18 32 / 0.3); }
   50% { box-shadow: 0 0 0 4px oklch(0.55 0.18 32 / 0.15); }
 }
+
+/* ----------------------------------------------------------------
+   Preview modal — code block styling
+----------------------------------------------------------------- */
+.preview-code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  tab-size: 2;
+  counter-reset: line;
+}
+.preview-code .line {
+  display: block;
+  padding-left: 2.5rem;
+  position: relative;
+}
+.preview-code .line::before {
+  counter-increment: line;
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  width: 1.75rem;
+  text-align: right;
+  color: oklch(0.6 0.02 60 / 0.5);
+  font-size: 9px;
+}
+
+/* ----------------------------------------------------------------
+   Search input — refined focus state
+----------------------------------------------------------------- */
+.search-input:focus {
+  box-shadow: 0 0 0 2px oklch(0.55 0.18 32 / 0.15);
+}
+
+/* ----------------------------------------------------------------
+   Filter chip — refined active state with checkmark
+----------------------------------------------------------------- */
+.filter-chip[aria-pressed="true"]::after {
+  content: " ✓";
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ----------------------------------------------------------------
+   Preview button hover — matcha tint
+----------------------------------------------------------------- */
+.preview-btn {
+  transition: all 0.18s ease;
+}
+.preview-btn:hover {
+  background-color: oklch(0.7 0.08 145 / 0.15);
+  color: oklch(0.45 0.07 145);
+}
+
+/* ----------------------------------------------------------------
+   Refined empty state — hanging scroll illustration
+----------------------------------------------------------------- */
+@keyframes scroll-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.scroll-sway {
+  animation: scroll-sway 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* ----------------------------------------------------------------
+   Tooltip arrow — for inspect tooltip
+----------------------------------------------------------------- */
+.inspect-tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  border: 4px solid transparent;
+  border-bottom-color: var(--border);
+}
+
+/* ----------------------------------------------------------------
+   Code syntax highlight — subtle keyword tint
+----------------------------------------------------------------- */
+.code-kw { color: oklch(0.55 0.18 32); }
+.code-str { color: oklch(0.5 0.1 145); }
+.code-num { color: oklch(0.5 0.06 60); }
+.code-comment { color: oklch(0.55 0.02 60 / 0.6); font-style: italic; }

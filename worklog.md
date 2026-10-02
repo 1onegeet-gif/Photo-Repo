@@ -517,3 +517,58 @@ Unresolved issues or risks, priority recommendations for next phase
 - No dark mode toggle wired
 - Could add: canvas zoom controls, animated GIF/frames export, tile-based large image tiling, preset search/filter
 - The recurring 15-min webDevReview cron will continue iterating
+
+---
+Task ID: 16 (cron round 8)
+Agent: main (Z.ai Code)
+Task: Add preset search/filter, export preview modal, styling polish
+
+Work Log:
+- QA check: dev server STILL down (6th consecutive round). Verified all code via lint + tsc.
+- Added preset search/filter:
+  - PresetGallery: search input (name/jp/desc/shape) with clear button, 6 category filter chips (All/Fine/Bold/Dark/Mix/Classic) with kanji labels
+  - `categoryOf()` derives category from preset patch (cell size, quantize, bgMode, shapeMix)
+  - `useMemo` filtering with empty-state message
+  - filter-chip active state with checkmark via `::after`
+- Added export preview modal:
+  - `PreviewModal` component: shows code preview for HTML/CSS/SVG/JSON with line/char count, copy + download buttons, Esc to close, modal-backdrop + modal-pop animations
+  - `buildPreview()` generates truncated preview strings (first 6-12 cells) so large mosaics don't freeze the modal
+  - ExportBar: each format button now has 3 actions — download (main), preview (Eye icon, matcha hover), copy (Copy icon, seal hover)
+  - Preview buttons are hover-reveal like copy buttons
+  - `handlePreview` gathers meta + opens modal; `handleDownloadFromPreview` downloads from within modal
+- Styling polish in globals.css:
+  - Preview code block styling (`.preview-code` with line counter, monospace, tab-size)
+  - Search input focus ring (`.search-input:focus`)
+  - Filter chip active checkmark (`.filter-chip[aria-pressed="true"]::after`)
+  - Preview button hover — matcha tint
+  - Scroll sway animation (`.scroll-sway`) for refined empty states
+  - Inspect tooltip arrow (`.inspect-tooltip::before`)
+  - Code syntax highlight classes (`.code-kw`, `.code-str`, `.code-num`, `.code-comment`)
+
+Verification:
+- Lint: 0 errors / 0 warnings
+- TypeScript: `bunx tsc --noEmit` passes (0 errors in project code)
+- agent-browser verification: DEFERRED — dev server down entire session (6th consecutive round). Code verified via lint + tsc.
+
+Stage Summary:
+- Round 8 complete: preset search/filter (6 categories), export preview modal (4 formats), styling polish (code blocks, search focus, filter checkmarks, preview hover, scroll sway, tooltip arrow, syntax highlight classes)
+- Code verified via lint + tsc; browser QA pending dev server recovery
+- Total: 20 built-in presets (searchable + filterable), 6 export formats (each with download + preview + copy), 6 SVG filter variants, 16 keyboard shortcuts
+
+---
+Current project status description/assessment (post round 8)
+- Mosaic Atelier now has: 20 built-in presets (with search + 6 category filters) + custom localStorage presets (with export/import), 6 export formats (PNG/SVG/HTML/CSS/JSON/ASCII) each with download + preview modal + copy-to-clipboard, 6 SVG filter variants, before/after compare, cell inspect + cell-color eyedropper, source-pixel color picker, URL state share, batch export, lightbox, undo/redo, live stats with color frequency histogram, image levels histogram (RGB+L), palette lock, shape mix, Bayer dithering, image transforms (flip/rotate with shortcuts), multi-image tray (6 recent), help/onboarding overlay, custom SVG favicon, 16 keyboard shortcuts, drag-to-resize workspace
+- Aesthetic: cream washi paper with animated enso, seigaiha corners, hanko seal, kanji watermark, ink-underline nav, sample hover dots, stat-pulse, compare pulse, deckle edges, asanoha pattern, toast stamp-in, scroll-reveal, header gradient strip, modal animations, histogram shimmer, badge pulses, kanji dividers, preset kanji stamps, filter chip rings + checkmarks, skeleton shimmer, paper grain, levels bar grow-in, mean pulse, card hover lift, responsive mobile sizing, print-friendly, copy button hover-reveal, fancy scrollbar, reduced-motion support, resize handle washi-tape, source pick indicator pulse, pipette active glow, panel section ink dots, preview code blocks with line numbers, search input focus ring, scroll sway, inspect tooltip arrow, syntax highlight classes
+- 100% client-side
+- Code verified via lint + tsc
+
+Current goals / completed modifications / verification results (post round 8)
+- DONE: preset search + 6 category filters, export preview modal (4 formats with copy/download), styling polish (code blocks, search focus, filter checkmarks, preview hover, scroll sway, tooltip arrow, syntax highlight)
+- Verification: lint clean, tsc clean; browser QA deferred (dev server down 6th consecutive round)
+
+Unresolved issues or risks, priority recommendations for next phase
+- **CRITICAL: dev server has been down for 6 consecutive rounds (rounds 3-8)** — persistent environment issue. The code is thoroughly verified via lint + tsc. Next round should verify if dev server is back; if so, run full agent-browser QA on ALL features from rounds 3-8.
+- CSS box-shadow export still uses uniform spread for non-square cells (documented)
+- No dark mode toggle wired
+- Could add: canvas zoom controls, animated GIF/frames export, tile-based large image tiling, batch randomize gallery
+- The recurring 15-min webDevReview cron will continue iterating

@@ -27,9 +27,11 @@ import {
   Layers,
   Sparkles,
   Copy,
+  Eye,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { PreviewModal } from "./PreviewModal";
 
 interface ExportBarProps {
   displayRef: React.RefObject<HTMLCanvasElement | null>;
@@ -49,6 +51,8 @@ export function ExportBar({ displayRef }: ExportBarProps) {
   const [pending, setPending] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
   const [svgFilter, setSvgFilter] = useState<SvgFilterKind>("none");
+  const [previewFormat, setPreviewFormat] = useState<"html" | "css" | "svg" | "json" | null>(null);
+  const [previewMeta, setPreviewMeta] = useState<ExportMeta | null>(null);
 
   const gather = async (): Promise<ExportMeta | null> => {
     if (!s.hasImage) {
@@ -163,6 +167,26 @@ export function ExportBar({ displayRef }: ExportBarProps) {
     wrapCopy("json", () => copyJson(meta));
   };
 
+  // --- Preview handlers ---
+  const handlePreview = async (fmt: "html" | "css" | "svg" | "json") => {
+    const meta = await gather();
+    if (!meta) return;
+    setPreviewMeta(meta);
+    setPreviewFormat(fmt);
+  };
+
+  const handleDownloadFromPreview = (fmt: "html" | "css" | "svg" | "json") => {
+    const meta = previewMeta;
+    if (!meta) return;
+    const slugName = slug(s.fileName);
+    if (fmt === "html") exportHtml(meta, `mosaic-${slugName}.html`);
+    else if (fmt === "css") exportCss(meta, `mosaic-${slugName}.css`);
+    else if (fmt === "svg") exportSvg(meta, `mosaic-${slugName}.svg`);
+    else if (fmt === "json") exportJson(meta, `mosaic-${slugName}.json`);
+    toast.success(`${fmt.toUpperCase()} downloaded`);
+    setPreviewFormat(null);
+  };
+
   const handleBatch = async () => {
     const meta = await gather();
     if (!meta) return;
@@ -210,6 +234,7 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           onClick={handleSvg}
           onCopy={handleCopySvg}
           copyPending={pending === "copy-svg"}
+          onPreview={() => handlePreview("svg")}
         />
         <ExportButton
           label="HTML"
@@ -219,6 +244,7 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           onClick={handleHtml}
           onCopy={handleCopyHtml}
           copyPending={pending === "copy-html"}
+          onPreview={() => handlePreview("html")}
         />
         <ExportButton
           label="CSS"
@@ -228,6 +254,7 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           onClick={handleCss}
           onCopy={handleCopyCss}
           copyPending={pending === "copy-css"}
+          onPreview={() => handlePreview("css")}
         />
         <ExportButton
           label="JSON"
@@ -237,6 +264,7 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           onClick={handleJson}
           onCopy={handleCopyJson}
           copyPending={pending === "copy-json"}
+          onPreview={() => handlePreview("json")}
         />
         <ExportButton
           label="ASCII"
@@ -298,6 +326,15 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           </>
         )}
       </button>
+
+      {/* Preview modal */}
+      <PreviewModal
+        open={previewFormat !== null}
+        format={previewFormat}
+        meta={previewMeta}
+        onClose={() => setPreviewFormat(null)}
+        onDownload={handleDownloadFromPreview}
+      />
     </div>
   );
 }
@@ -308,6 +345,7 @@ function ExportButton({
   icon,
   onClick,
   onCopy,
+  onPreview,
   pending,
   copyPending,
 }: {
@@ -316,6 +354,7 @@ function ExportButton({
   icon: React.ReactNode;
   onClick: () => void;
   onCopy?: () => void;
+  onPreview?: () => void;
   pending: boolean;
   copyPending?: boolean;
 }) {
@@ -337,21 +376,35 @@ function ExportButton({
           {jp}
         </span>
       </button>
-      {onCopy && (
-        <button
-          type="button"
-          onClick={onCopy}
-          disabled={pending || copyPending}
-          title="Copy to clipboard"
-          aria-label={`Copy ${label} to clipboard`}
-          className={cn(
-            "export-copy-btn absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded text-muted-foreground/40 transition-all hover:bg-seal/10 hover:text-seal disabled:opacity-40",
-            copyPending && "animate-pulse text-seal opacity-100",
-          )}
-        >
-          <Copy className="h-3 w-3" />
-        </button>
-      )}
+      <div className="absolute right-1 top-1 flex gap-0.5">
+        {onPreview && (
+          <button
+            type="button"
+            onClick={onPreview}
+            disabled={pending || copyPending}
+            title="Preview code"
+            aria-label={`Preview ${label}`}
+            className="export-copy-btn flex h-5 w-5 items-center justify-center rounded text-muted-foreground/40 transition-all hover:bg-matcha/10 hover:text-matcha disabled:opacity-40"
+          >
+            <Eye className="h-3 w-3" />
+          </button>
+        )}
+        {onCopy && (
+          <button
+            type="button"
+            onClick={onCopy}
+            disabled={pending || copyPending}
+            title="Copy to clipboard"
+            aria-label={`Copy ${label} to clipboard`}
+            className={cn(
+              "export-copy-btn flex h-5 w-5 items-center justify-center rounded text-muted-foreground/40 transition-all hover:bg-seal/10 hover:text-seal disabled:opacity-40",
+              copyPending && "animate-pulse text-seal opacity-100",
+            )}
+          >
+            <Copy className="h-3 w-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
