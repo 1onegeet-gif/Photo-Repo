@@ -24,11 +24,6 @@ import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useUrlState } from "@/lib/useUrlState";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import {
   Download,
   BookOpen,
   Lightbulb,
@@ -48,6 +43,10 @@ export default function Home() {
   const originalImgRef = useRef<HTMLImageElement | null>(null);
   const state = useMosaic();
   const [stats, setStats] = useState<Stats | null>(null);
+  // Extract stable actions to avoid re-render loops in applyTransform
+  const setHasImage = useMosaic((s) => s.setHasImage);
+  const setShowOriginal = useMosaic((s) => s.setShowOriginal);
+  const resetTransform = useMosaic((s) => s.resetTransform);
 
   // Install keyboard shortcuts
   useKeyboardShortcuts();
@@ -56,11 +55,15 @@ export default function Home() {
 
   // Apply transform to the source canvas from the original image.
   // Called on image load AND whenever the transform changes.
-  // Uses a ref synced via effect to avoid stale closures + re-render loops.
+  // Use a ref synced via effect to avoid stale closures + re-render loops.
   const transformRef = useRef(state.transform);
   useEffect(() => {
     transformRef.current = state.transform;
   }, [state.transform]);
+  const fileNameRef = useRef(state.fileName);
+  useEffect(() => {
+    fileNameRef.current = state.fileName;
+  }, [state.fileName]);
 
   const applyTransform = useCallback(() => {
     const img = originalImgRef.current;
@@ -89,9 +92,9 @@ export default function Home() {
     sctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
     sctx.drawImage(img, -w / 2, -h / 2, w, h);
     sctx.restore();
-    state.setHasImage(true, outW, outH, state.fileName || "image");
-    requestAnimationFrame(() => state.setShowOriginal(false));
-  }, [state]);
+    setHasImage(true, outW, outH, fileNameRef.current || "image");
+    requestAnimationFrame(() => setShowOriginal(false));
+  }, [setHasImage, setShowOriginal]);
 
   const trayAdd = useImageTray((s) => s.add);
   const traySetActive = useImageTray((s) => s.setActive);
@@ -99,10 +102,10 @@ export default function Home() {
   const onImage = useCallback(
     (img: HTMLImageElement, name: string) => {
       originalImgRef.current = img;
-      state.resetTransform();
+      resetTransform();
       // Defer one tick so resetTransform has flushed to the ref
       requestAnimationFrame(() => {
-        state.setHasImage(true, 1, 1, name);
+        setHasImage(true, 1, 1, name);
         applyTransform();
       });
       // Add to image tray (async thumbnail generation)
@@ -131,7 +134,7 @@ export default function Home() {
         });
       }
     },
-    [state, applyTransform, trayAdd, traySetActive],
+    [resetTransform, setHasImage, applyTransform, trayAdd, traySetActive],
   );
 
   const onPickFromTray = useCallback(
@@ -139,22 +142,23 @@ export default function Home() {
       const img = new Image();
       img.onload = () => {
         originalImgRef.current = img;
-        state.resetTransform();
+        resetTransform();
         requestAnimationFrame(() => {
-          state.setHasImage(true, 1, 1, trayImg.name);
+          setHasImage(true, 1, 1, trayImg.name);
           applyTransform();
         });
       };
       img.src = trayImg.dataUrl;
     },
-    [state, applyTransform],
+    [resetTransform, setHasImage, applyTransform],
   );
 
-  // Re-apply transform whenever transform changes (reads from ref, no loop risk)
+  // Re-apply transform whenever transform changes
+  // (applyTransform reads from transformRef, not state — no loop risk)
   useEffect(() => {
     if (!originalImgRef.current) return;
     applyTransform();
-  }, [state.transform.flipH, state.transform.flipV, state.transform.rotate90, applyTransform]);
+  }, [state.transform.flipH, state.transform.flipV, state.transform.rotate90]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -226,63 +230,15 @@ export default function Home() {
           <CustomPresetBar />
         </section>
 
-        {/* Workspace: canvas + controls (resizable on desktop) */}
-        <section className="hidden lg:block">
-          <ResizablePanelGroup direction="horizontal" className="gap-4">
-            <ResizablePanel defaultSize={62} minSize={40} maxSize={80}>
-              <div className="flex flex-col gap-4">
-                <MosaicCanvas
-                  sourceRef={sourceRef}
-                  displayRef={displayRef}
-                  onStats={setStats}
-                />
-                {/* Stats panel under the canvas */}
-                <div className="matte-card washi-texture rounded-lg p-4">
-                  <StatsPanel
-                    stats={stats}
-                    width={state.sourceWidth}
-                    height={state.sourceHeight}
-                  />
-                </div>
-                {/* Levels panel — source image RGB histogram */}
-                <div className="matte-card washi-texture rounded-lg p-4">
-                  <LevelsPanel
-                    sourceRef={sourceRef}
-                    hasImage={state.hasImage}
-                    width={state.sourceWidth}
-                    height={state.sourceHeight}
-                  />
-                </div>
-              </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle className="!w-1.5 rounded-full bg-border/40 hover:bg-seal/40 transition-colors" />
-            <ResizablePanel defaultSize={38} minSize={20} maxSize={55}>
-              <aside className="max-h-[calc(100vh-92px)] overflow-y-auto pr-1">
-                <div className="matte-card washi-texture rounded-lg p-4">
-                  <ControlPanel />
-                  <div className="mt-6">
-                    <TransformBar />
-                  </div>
-                  <div className="mt-6">
-                    <ShapeMixPanel />
-                  </div>
-                  <div className="mt-6">
-                    <PaletteLockPanel sourceRef={sourceRef} />
-                  </div>
-                </div>
-              </aside>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </section>
-
-        {/* Workspace: canvas + controls (stacked on mobile) */}
-        <section className="grid grid-cols-1 gap-6 lg:hidden">
+        {/* Workspace: canvas + controls */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           <div className="flex flex-col gap-4">
             <MosaicCanvas
               sourceRef={sourceRef}
               displayRef={displayRef}
               onStats={setStats}
             />
+            {/* Stats panel under the canvas */}
             <div className="matte-card washi-texture rounded-lg p-4">
               <StatsPanel
                 stats={stats}
@@ -290,6 +246,7 @@ export default function Home() {
                 height={state.sourceHeight}
               />
             </div>
+            {/* Levels panel — source image RGB histogram */}
             <div className="matte-card washi-texture rounded-lg p-4">
               <LevelsPanel
                 sourceRef={sourceRef}
@@ -299,7 +256,7 @@ export default function Home() {
               />
             </div>
           </div>
-          <aside>
+          <aside className="lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto lg:pr-1">
             <div className="matte-card washi-texture rounded-lg p-4">
               <ControlPanel />
               <div className="mt-6">

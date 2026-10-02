@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ParamSnapshot } from "./mosaic-store";
 
 const STORAGE_KEY = "mosaic.customPresets.v1";
@@ -36,8 +36,15 @@ function saveAll(list: CustomPreset[]) {
 }
 
 export function useCustomPresets() {
-  // Lazy-initialize from localStorage on first render (client-only).
-  const [presets, setPresets] = useState<CustomPreset[]>(() => loadAll());
+  // Start with empty array (same on server + client = no hydration mismatch).
+  // Load from localStorage in a useEffect after mount.
+  const [presets, setPresets] = useState<CustomPreset[]>([]);
+
+  // Load saved presets after mount (client-only, no hydration mismatch)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPresets(loadAll());
+  }, []);
 
   const add = useCallback((p: Omit<CustomPreset, "id" | "createdAt">): CustomPreset => {
     const full: CustomPreset = {

@@ -75,9 +75,11 @@ interface RandomizeGalleryProps {
 
 export function RandomizeGallery({ sampleSrc }: RandomizeGalleryProps) {
   const applyPreset = useMosaic((s) => s.applyPreset);
-  // Lazy-initialize variations on first render (no effect needed)
+  // Use a FIXED seed for the initial render so SSR and client produce
+  // identical output — avoids hydration mismatch. "Reroll" uses Date.now()
+  // which only runs on client interaction (no SSR mismatch).
   const [variations, setVariations] = useState<Variation[]>(() => {
-    const base = (Date.now() % 1000000) | 0;
+    const base = 987654; // deterministic initial seed
     return [0, 1, 2, 3].map((i) => randomVariation(base + i * 1000));
   });
   const [active, setActive] = useState<number | null>(null);
