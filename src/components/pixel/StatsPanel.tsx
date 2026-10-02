@@ -48,9 +48,13 @@ export function StatsPanel({ stats, width, height }: StatsPanelProps) {
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
+  // `key={value}` on the span remounts it when value changes,
+  // re-triggering the CSS pulse animation — no effect needed.
   return (
     <div className="stat-tile">
-      <span className="stat-value">{value}</span>
+      <span key={value} className="stat-value stat-pulse">
+        {value}
+      </span>
       <span className="stat-label">{label}</span>
     </div>
   );

@@ -14,6 +14,7 @@ import { ShapeMixPanel } from "@/components/pixel/ShapeMixPanel";
 import { StatsPanel, Stats } from "@/components/pixel/StatsPanel";
 import { useMosaic } from "@/lib/mosaic-store";
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
+import { useUrlState } from "@/lib/useUrlState";
 import {
   Download,
   BookOpen,
@@ -36,6 +37,8 @@ export default function Home() {
 
   // Install keyboard shortcuts
   useKeyboardShortcuts();
+  // Sync params to URL hash for shareable configs
+  useUrlState();
 
   const onImage = useCallback(
     (img: HTMLImageElement, name: string) => {
@@ -219,6 +222,8 @@ export default function Home() {
               <Shortcut keys={["D"]} label="Toggle dither" />
               <Shortcut keys={["F"]} label="Toggle focal" />
               <Shortcut keys={["O"]} label="Peek original" />
+              <Shortcut keys={["C"]} label="Compare slider" />
+              <Shortcut keys={["I"]} label="Inspect cells" />
               <Shortcut keys={["R"]} label="Reseed" />
               <Shortcut keys={["U"]} label="Undo" />
               <Shortcut keys={["⇧","U"]} label="Redo" />

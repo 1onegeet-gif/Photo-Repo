@@ -1,10 +1,11 @@
 // Export utilities — turn a list of cells into downloadable artifacts.
-// PNG via the live canvas, HTML/CSS/JSON via string templates.
+// PNG via the live canvas, HTML/CSS/JSON/SVG/ASCII via string templates.
 
 import { Cell } from "./pixelate";
 import { RGB, rgbToHex, rgbToCss } from "./color";
+import { shapeToSvg, ShapeKind } from "./shapes";
 
-export type ExportFormat = "png" | "html" | "css" | "json" | "ascii";
+export type ExportFormat = "png" | "html" | "css" | "json" | "svg" | "ascii";
 
 export interface ExportMeta {
   width: number;
@@ -13,6 +14,12 @@ export interface ExportMeta {
   background: RGB | null;
   shape: string;
   shapeSize: number;
+  /** Per-cell rotation in degrees (used by SVG export). */
+  rotation?: number;
+  /** Per-cell jitter strength 0..1 (used by SVG export). */
+  jitter?: number;
+  /** Seed for jitter RNG (used by SVG export). */
+  seed?: number;
 }
 
 function download(filename: string, content: string | Blob, mime: string) {
@@ -195,8 +202,77 @@ export function exportAscii(meta: ExportMeta, name = "mosaic.txt") {
   download(name, lines.join("\n"), "text/plain");
 }
 
+/** SVG export — true vector mosaic. Each cell becomes a shape element. */
+export function exportSvg(meta: ExportMeta, name = "mosaic.svg") {
+  const { width, height, cells, background, shape, shapeSize, rotation = 0, jitter = 0, seed = 1 } = meta;
+  const bg = background ? rgbToHex(background) : "transparent";
+  // Simple seeded RNG for jitter (mulberry32)
+  let a = (seed >>> 0) || 1;
+  const rand = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const fillFraction = Math.max(0.05, Math.min(1, shapeSize));
+  const parts: string[] = cells.map((c) => {
+    const s = Math.min(c.w, c.h);
+    const gap = (1 - fillFraction) * (s / 2);
+    const j = jitter * (rand() - 0.5) * s * 0.3;
+    const jr = jitter * (rand() - 0.5) * 40;
+    const hex = rgbToHex(c.color);
+    const useShape = (c.shape ?? shape) as ShapeKind;
+    return shapeToSvg(useShape, c.x + (rand() - 0.5) * j, c.y + (rand() - 0.5) * j, s, hex, gap, rotation + jr);
+  });
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" shape-rendering="geometricPrecision">
+  <rect width="${width}" height="${height}" fill="${bg}"/>
+  <g>
+${parts.map((p) => "    " + p).join("\n")}
+  </g>
+</svg>
+`;
+  download(name, svg, "image/svg+xml");
+}
+
 function uniquePalette(cells: Cell[]): string[] {
   const set = new Set<string>();
   for (const c of cells) set.add(rgbToHex(c.color));
   return Array.from(set);
 }
+
+export interface BatchProgress {
+  done: number;
+  total: number;
+  current: string;
+}
+
+/**
+ * Run every export in sequence with a small delay between downloads so the
+ * browser doesn't block. Reports progress via the callback.
+ */
+export async function exportAll(
+  canvas: HTMLCanvasElement,
+  meta: ExportMeta,
+  slug: string,
+  onProgress?: (p: BatchProgress) => void,
+) {
+  const formats: { key: ExportFormat; label: string; fn: () => void | Promise<void> }[] = [
+    { key: "png", label: "PNG", fn: () => exportPng(canvas, `${slug}.png`) },
+    { key: "svg", label: "SVG", fn: () => exportSvg(meta, `${slug}.svg`) },
+    { key: "html", label: "HTML", fn: () => exportHtml(meta, `${slug}.html`) },
+    { key: "css", label: "CSS", fn: () => exportCss(meta, `${slug}.css`) },
+    { key: "json", label: "JSON", fn: () => exportJson(meta, `${slug}.json`) },
+    { key: "ascii", label: "ASCII", fn: () => exportAscii(meta, `${slug}.txt`) },
+  ];
+  let done = 0;
+  for (const f of formats) {
+    onProgress?.({ done, total: formats.length, current: f.label });
+    await new Promise((r) => setTimeout(r, 350)); // give browser time between downloads
+    await f.fn();
+    done++;
+  }
+  onProgress?.({ done, total: formats.length, current: "done" });
+}
+

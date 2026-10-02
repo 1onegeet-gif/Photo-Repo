@@ -1,16 +1,26 @@
 "use client";
 
 import {
+  exportAll,
   exportAscii,
   exportCss,
   exportHtml,
   exportJson,
   exportPng,
+  exportSvg,
   ExportMeta,
 } from "@/lib/export";
 import { useMosaic } from "@/lib/mosaic-store";
 import { toast } from "sonner";
-import { Download, FileImage, Code2, Braces, FileText } from "lucide-react";
+import {
+  Download,
+  FileImage,
+  Code2,
+  Braces,
+  FileText,
+  Spline,
+  Layers,
+} from "lucide-react";
 import { useState } from "react";
 
 interface ExportBarProps {
@@ -20,8 +30,9 @@ interface ExportBarProps {
 export function ExportBar({ displayRef }: ExportBarProps) {
   const s = useMosaic();
   const [pending, setPending] = useState<string | null>(null);
+  const [batchProgress, setBatchProgress] = useState<string | null>(null);
 
-  const gather = (): ExportMeta | null => {
+  const gather = async (): Promise<ExportMeta | null> => {
     if (!s.hasImage) {
       toast.error("Load an image first.");
       return null;
@@ -36,18 +47,20 @@ export function ExportBar({ displayRef }: ExportBarProps) {
           background: detail.bg,
           shape: detail.shape,
           shapeSize: detail.shapeSize,
+          rotation: s.rotation,
+          jitter: s.jitter,
+          seed: s.seed,
         });
         window.removeEventListener("mosaic:cells", handler);
       };
       window.addEventListener("mosaic:cells", handler);
-      window.dispatchEvent(new CustomEvent("mosaic:request-cells", { detail: { type: "get-cells" } }));
+      window.dispatchEvent(
+        new CustomEvent("mosaic:request-cells", { detail: { type: "get-cells" } }),
+      );
     });
   };
 
-  const wrap = async (
-    name: string,
-    fn: () => void | Promise<void>,
-  ) => {
+  const wrap = async (name: string, fn: () => void | Promise<void>) => {
     setPending(name);
     try {
       await fn();
@@ -65,6 +78,12 @@ export function ExportBar({ displayRef }: ExportBarProps) {
       if (!c) throw new Error("Canvas not ready");
       exportPng(c, `mosaic-${slug(s.fileName)}.png`);
     });
+
+  const handleSvg = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    wrap("svg", () => exportSvg(meta, `mosaic-${slug(s.fileName)}.svg`));
+  };
 
   const handleHtml = async () => {
     const meta = await gather();
@@ -90,49 +109,105 @@ export function ExportBar({ displayRef }: ExportBarProps) {
     wrap("ascii", () => exportAscii(meta, `mosaic-${slug(s.fileName)}.txt`));
   };
 
+  const handleBatch = async () => {
+    const meta = await gather();
+    if (!meta) return;
+    const c = displayRef.current;
+    if (!c) {
+      toast.error("Canvas not ready");
+      return;
+    }
+    setPending("batch");
+    setBatchProgress("starting…");
+    try {
+      await exportAll(c, meta, `mosaic-${slug(s.fileName)}`, (p) => {
+        setBatchProgress(
+          p.current === "done"
+            ? "done"
+            : `${p.current} (${p.done + 1}/${p.total})`,
+        );
+      });
+      toast.success("All formats exported", {
+        description: "PNG · SVG · HTML · CSS · JSON · ASCII",
+      });
+    } catch (e) {
+      toast.error(`Batch failed: ${(e as Error).message}`);
+    } finally {
+      setPending(null);
+      setBatchProgress(null);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <ExportButton
-        label="PNG"
-        jp="画像"
-        icon={<FileImage className="h-4 w-4" />}
-        pending={pending === "png"}
-        onClick={handlePng}
-      />
-      <ExportButton
-        label="HTML"
-        jp="HTML"
-        icon={<Code2 className="h-4 w-4" />}
-        pending={pending === "html"}
-        onClick={handleHtml}
-      />
-      <ExportButton
-        label="CSS"
-        jp="CSS"
-        icon={<Code2 className="h-4 w-4" />}
-        pending={pending === "css"}
-        onClick={handleCss}
-      />
-      <ExportButton
-        label="JSON"
-        jp="JSON"
-        icon={<Braces className="h-4 w-4" />}
-        pending={pending === "json"}
-        onClick={handleJson}
-      />
-      <ExportButton
-        label="ASCII"
-        jp="TEXT"
-        icon={<FileText className="h-4 w-4" />}
-        pending={pending === "ascii"}
-        onClick={handleAscii}
-      />
-      <div className="flex items-center justify-center rounded-md border border-dashed border-border/60 bg-paper/40 p-2 text-center text-[10px] leading-tight text-muted-foreground">
-        <span>
-          <Download className="mx-auto mb-0.5 h-3 w-3 text-seal" />
-          codes & assets
-        </span>
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <ExportButton
+          label="PNG"
+          jp="画像"
+          icon={<FileImage className="h-4 w-4" />}
+          pending={pending === "png"}
+          onClick={handlePng}
+        />
+        <ExportButton
+          label="SVG"
+          jp="vector"
+          icon={<Spline className="h-4 w-4" />}
+          pending={pending === "svg"}
+          onClick={handleSvg}
+        />
+        <ExportButton
+          label="HTML"
+          jp="HTML"
+          icon={<Code2 className="h-4 w-4" />}
+          pending={pending === "html"}
+          onClick={handleHtml}
+        />
+        <ExportButton
+          label="CSS"
+          jp="CSS"
+          icon={<Code2 className="h-4 w-4" />}
+          pending={pending === "css"}
+          onClick={handleCss}
+        />
+        <ExportButton
+          label="JSON"
+          jp="JSON"
+          icon={<Braces className="h-4 w-4" />}
+          pending={pending === "json"}
+          onClick={handleJson}
+        />
+        <ExportButton
+          label="ASCII"
+          jp="TEXT"
+          icon={<FileText className="h-4 w-4" />}
+          pending={pending === "ascii"}
+          onClick={handleAscii}
+        />
       </div>
+
+      <button
+        type="button"
+        onClick={handleBatch}
+        disabled={pending !== null}
+        className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-md border border-seal/40 bg-seal/5 px-3 py-2.5 text-sm font-medium text-seal transition-all hover:bg-seal/10 disabled:opacity-60"
+      >
+        {pending === "batch" ? (
+          <>
+            <span className="ink-loader absolute inset-0" />
+            <span className="relative z-10">
+              {batchProgress ? `Exporting ${batchProgress}` : "Exporting…"}
+            </span>
+          </>
+        ) : (
+          <>
+            <Layers className="h-4 w-4" />
+            <span>Export all 6 formats</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-seal/60">
+              一括
+            </span>
+          </>
+        )}
+      </button>
     </div>
   );
 }

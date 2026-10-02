@@ -130,7 +130,7 @@ export function UploadZone({ onImage, samples }: UploadZoneProps) {
             variant="outline"
             size="sm"
             onClick={() => loadSample(s.src, s.label)}
-            className="h-8 gap-2 border-border/60 bg-paper/60 px-2 text-xs hover:bg-paper"
+            className="sample-chip-btn h-8 gap-2 border-border/60 bg-paper/60 px-2 pl-3.5 text-xs hover:border-seal/40 hover:bg-paper"
           >
             <span className="font-display tracking-wide">{s.jp}</span>
             <span className="text-muted-foreground">{s.label}</span>

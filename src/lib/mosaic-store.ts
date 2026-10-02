@@ -46,6 +46,9 @@ export interface MosaicState extends ParamSnapshot {
   // UI
   showOriginal: boolean;
   showFocal: boolean;
+  compareMode: boolean;
+  splitPos: number;        // 0..1 — compare slider position
+  inspectMode: boolean;    // hover-to-inspect cells
   // History
   past: ParamSnapshot[];
   future: ParamSnapshot[];
@@ -77,6 +80,10 @@ export interface MosaicState extends ParamSnapshot {
   redo: () => void;
   /** Replace params WITHOUT pushing history (for preset/undo/redo themselves). */
   replaceParams: (p: Partial<ParamSnapshot>, opts?: { silent?: boolean }) => void;
+  // Compare + inspect
+  setCompareMode: (v: boolean) => void;
+  setSplitPos: (v: number) => void;
+  setInspectMode: (v: boolean) => void;
 }
 
 const INITIAL: ParamSnapshot = {
@@ -134,6 +141,9 @@ export const useMosaic = create<MosaicState>((set, get) => ({
   fileName: "",
   showOriginal: false,
   showFocal: false,
+  compareMode: false,
+  splitPos: 0.5,
+  inspectMode: false,
   past: [],
   future: [],
 
@@ -258,4 +268,8 @@ export const useMosaic = create<MosaicState>((set, get) => ({
       future: s.future.slice(1),
     });
   },
+
+  setCompareMode: (v) => set({ compareMode: v }),
+  setSplitPos: (v) => set({ splitPos: Math.max(0, Math.min(1, v)) }),
+  setInspectMode: (v) => set({ inspectMode: v }),
 }));

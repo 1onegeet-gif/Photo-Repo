@@ -17,6 +17,8 @@ import { SHAPE_OPTIONS } from "@/lib/shapes";
  *  u        → undo
  *  U (shift+u) → redo
  *  p        → open presets (scroll to preset section)
+ *  c        → toggle compare (before/after slider)
+ *  i        → toggle inspect (hover cell tooltip)
  *  ?        → toggle help
  */
 export function useKeyboardShortcuts() {
@@ -88,6 +90,14 @@ export function useKeyboardShortcuts() {
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
           break;
         }
+        case "c":
+          e.preventDefault();
+          s.setCompareMode(!s.compareMode);
+          break;
+        case "i":
+          e.preventDefault();
+          s.setInspectMode(!s.inspectMode);
+          break;
       }
     };
     window.addEventListener("keydown", handler);

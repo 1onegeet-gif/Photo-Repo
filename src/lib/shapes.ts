@@ -147,3 +147,92 @@ export function shapeOutlineHint(shape: ShapeKind): string {
     case "star": return "hoshi";
   }
 }
+
+/**
+ * Build an SVG element string for a single shape centered inside a cell at
+ * (x, y) with size `s`. Returns the inner markup (no wrapping <svg>).
+ * `fill` is a CSS color, `gap` shrinks the visible shape.
+ */
+export function shapeToSvg(
+  shape: ShapeKind,
+  x: number,
+  y: number,
+  s: number,
+  fill: string,
+  gap = 0,
+  rotation = 0,
+): string {
+  const r = Math.max(0.25, s / 2 - gap);
+  const cx = x + s / 2;
+  const cy = y + s / 2;
+  const tf = rotation ? ` transform="rotate(${rotation} ${cx} ${cy})"` : "";
+
+  switch (shape) {
+    case "square":
+      return `<rect x="${(x + gap).toFixed(1)}" y="${(y + gap).toFixed(1)}" width="${(s - gap * 2).toFixed(1)}" height="${(s - gap * 2).toFixed(1)}" fill="${fill}"${tf}/>`;
+    case "circle":
+      return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}"${tf}/>`;
+    case "triangle": {
+      const pts = [
+        `${cx.toFixed(1)},${(y + gap).toFixed(1)}`,
+        `${(x + s - gap).toFixed(1)},${(y + s - gap).toFixed(1)}`,
+        `${(x + gap).toFixed(1)},${(y + s - gap).toFixed(1)}`,
+      ].join(" ");
+      return `<polygon points="${pts}" fill="${fill}"${tf}/>`;
+    }
+    case "hexagon": {
+      const w = s - gap * 2;
+      const h = w * Math.sqrt(3) / 2;
+      const ox = x + gap;
+      const oy = cy - h / 2;
+      const tw = w / 4;
+      const th = h / 2;
+      const pts = [
+        `${ox.toFixed(1)},${(oy + th).toFixed(1)}`,
+        `${(ox + tw).toFixed(1)},${oy.toFixed(1)}`,
+        `${(ox + tw * 3).toFixed(1)},${oy.toFixed(1)}`,
+        `${(ox + w).toFixed(1)},${(oy + th).toFixed(1)}`,
+        `${(ox + tw * 3).toFixed(1)},${(oy + h).toFixed(1)}`,
+        `${(ox + tw).toFixed(1)},${(oy + h).toFixed(1)}`,
+      ].join(" ");
+      return `<polygon points="${pts}" fill="${fill}"${tf}/>`;
+    }
+    case "diamond": {
+      const pts = [
+        `${cx.toFixed(1)},${(y + gap).toFixed(1)}`,
+        `${(x + s - gap).toFixed(1)},${cy.toFixed(1)}`,
+        `${cx.toFixed(1)},${(y + s - gap).toFixed(1)}`,
+        `${(x + gap).toFixed(1)},${cy.toFixed(1)}`,
+      ].join(" ");
+      return `<polygon points="${pts}" fill="${fill}"${tf}/>`;
+    }
+    case "cross": {
+      const arm = s / 3;
+      const o = (s - arm) / 2;
+      const a = `<rect x="${(x + o).toFixed(1)}" y="${(y + gap).toFixed(1)}" width="${arm.toFixed(1)}" height="${(s - gap * 2).toFixed(1)}" fill="${fill}"${tf}/>`;
+      const b = `<rect x="${(x + gap).toFixed(1)}" y="${(y + o).toFixed(1)}" width="${(s - gap * 2).toFixed(1)}" height="${arm.toFixed(1)}" fill="${fill}"${tf}/>`;
+      return a + b;
+    }
+    case "heart": {
+      const w = s - gap * 2;
+      const top = y + gap + w * 0.3;
+      const bottom = y + s - gap;
+      const path = `M ${cx.toFixed(1)} ${bottom.toFixed(1)} C ${(cx - w * 0.55).toFixed(1)} ${(bottom - w * 0.45).toFixed(1)}, ${(x + gap).toFixed(1)} ${(top + w * 0.1).toFixed(1)}, ${cx.toFixed(1)} ${(top - w * 0.15).toFixed(1)} C ${(x + s - gap).toFixed(1)} ${(top + w * 0.1).toFixed(1)}, ${(cx + w * 0.55).toFixed(1)} ${(bottom - w * 0.45).toFixed(1)}, ${cx.toFixed(1)} ${bottom.toFixed(1)} Z`;
+      return `<path d="${path}" fill="${fill}"${tf}/>`;
+    }
+    case "star": {
+      const outer = r;
+      const inner = r * 0.45;
+      const pts: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const rad = i % 2 === 0 ? outer : inner;
+        const a = (Math.PI / 5) * i - Math.PI / 2;
+        const px = cx + Math.cos(a) * rad;
+        const py = cy + Math.sin(a) * rad;
+        pts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+      }
+      return `<polygon points="${pts.join(" ")}" fill="${fill}"${tf}/>`;
+    }
+  }
+}
+
