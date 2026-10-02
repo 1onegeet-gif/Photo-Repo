@@ -68,6 +68,19 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/** Build a CSS custom-properties string from a list of RGB colors. */
+export function buildPaletteCssVars(colors: RGB[], prefix = "--mosaic"): string {
+  const lines = colors.map((c, i) => `  ${prefix}-${i + 1}: ${rgbToHex(c)};`);
+  return `:root {
+${lines.join("\n")}
+}`;
+}
+
+/** Copy a palette as CSS custom properties. Returns success. */
+export async function copyPaletteCssVars(colors: RGB[], prefix?: string): Promise<boolean> {
+  return copyToClipboard(buildPaletteCssVars(colors, prefix));
+}
+
 /** Build the HTML export string (shared between download + clipboard). */
 function buildHtmlString(meta: ExportMeta): string {
   const { width, height, cells, background, shape, shapeSize } = meta;

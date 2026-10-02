@@ -1330,3 +1330,90 @@ a:focus-visible {
 .code-str { color: oklch(0.5 0.1 145); }
 .code-num { color: oklch(0.5 0.06 60); }
 .code-comment { color: oklch(0.55 0.02 60 / 0.6); font-style: italic; }
+
+/* ----------------------------------------------------------------
+   Slider tick marks — subtle notches on the track
+----------------------------------------------------------------- */
+[data-slot="slider-track"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(10% - 1px),
+    oklch(0.5 0.02 60 / 0.2) calc(10% - 1px),
+    oklch(0.5 0.02 60 / 0.2) 10%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ----------------------------------------------------------------
+   Randomize gallery — dice roll animation
+----------------------------------------------------------------- */
+@keyframes dice-roll {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.dice-rolling {
+  animation: dice-roll 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ----------------------------------------------------------------
+   Refined toast — icon tinted by type
+----------------------------------------------------------------- */
+[data-sonner-toast][data-type="success"] .toast-icon {
+  color: oklch(0.5 0.1 145);
+}
+[data-sonner-toast][data-type="error"] .toast-icon {
+  color: oklch(0.55 0.2 27);
+}
+[data-sonner-toast][data-type="info"] .toast-icon {
+  color: oklch(0.55 0.18 32);
+}
+
+/* ----------------------------------------------------------------
+   Variation thumb — hover zoom
+----------------------------------------------------------------- */
+.variation-thumb-wrap {
+  overflow: hidden;
+  border-radius: 6px;
+}
+.variation-thumb-wrap canvas {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.variation-thumb-wrap:hover canvas {
+  transform: scale(1.04);
+}
+
+/* ----------------------------------------------------------------
+   Copy CSS vars button — matcha hover glow
+----------------------------------------------------------------- */
+.copy-css-vars-btn {
+  transition: all 0.18s ease;
+}
+.copy-css-vars-btn:hover {
+  border-color: oklch(0.7 0.08 145 / 0.5);
+  box-shadow: 0 0 0 2px oklch(0.7 0.08 145 / 0.1);
+}
+
+/* ----------------------------------------------------------------
+   Refined kbd — 3D press effect on active
+----------------------------------------------------------------- */
+kbd.kbd:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
+/* ----------------------------------------------------------------
+   Subtle entrance for randomize tiles — staggered
+----------------------------------------------------------------- */
+@keyframes tile-pop {
+  0% { opacity: 0; transform: scale(0.9) translateY(4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.tile-pop {
+  animation: tile-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

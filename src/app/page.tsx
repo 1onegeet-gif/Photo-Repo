@@ -9,6 +9,7 @@ import { ControlPanel } from "@/components/pixel/ControlPanel";
 import { ExportBar } from "@/components/pixel/ExportBar";
 import { PanelSection } from "@/components/pixel/PanelSection";
 import { PresetGallery } from "@/components/pixel/PresetGallery";
+import { RandomizeGallery } from "@/components/pixel/RandomizeGallery";
 import { PaletteLockPanel } from "@/components/pixel/PaletteLockPanel";
 import { ShapeMixPanel } from "@/components/pixel/ShapeMixPanel";
 import { StatsPanel, Stats } from "@/components/pixel/StatsPanel";
@@ -213,6 +214,11 @@ export default function Home() {
             </p>
             <PresetGallery sampleSrc="/samples/fuji.png" />
           </PanelSection>
+        </section>
+
+        {/* Randomize gallery — 4 dice-rolled variations */}
+        <section className="matte-card washi-texture rounded-lg p-4">
+          <RandomizeGallery sampleSrc="/samples/fuji.png" />
         </section>
 
         {/* Custom presets (localStorage) */}
