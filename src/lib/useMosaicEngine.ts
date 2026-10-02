@@ -29,6 +29,10 @@ export function useMosaicEngine(fn: () => void) {
     hasImage,
     sourceWidth,
     sourceHeight,
+    palette,
+    dither,
+    shapeMix,
+    shapeMixShapes,
   } = state;
 
   useEffect(() => {
@@ -70,6 +74,11 @@ export function useMosaicEngine(fn: () => void) {
     hasImage,
     sourceWidth,
     sourceHeight,
+    palette,
+    dither,
+    shapeMix,
+    shapeMixShapes,
+    fn,
   ]);
 
   return state;

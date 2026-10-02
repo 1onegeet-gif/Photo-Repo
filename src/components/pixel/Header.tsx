@@ -1,6 +1,7 @@
 "use client";
 
 import { Brush } from "lucide-react";
+import { HistoryControls } from "./HistoryControls";
 
 export function Header() {
   return (
@@ -21,19 +22,27 @@ export function Header() {
         </div>
         <nav className="flex items-center gap-1.5">
           <a
-            href="#how"
+            href="#presets"
             className="rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-paper hover:text-foreground"
+          >
+            Presets
+          </a>
+          <a
+            href="#how"
+            className="hidden rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-paper hover:text-foreground sm:block"
           >
             How
           </a>
           <a
             href="#export"
-            className="rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-paper hover:text-foreground"
+            className="hidden rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-paper hover:text-foreground sm:block"
           >
             Export
           </a>
+          <div className="mx-1 hidden h-5 w-px bg-border/60 sm:block" />
+          <HistoryControls />
           <span
-            className="ml-1 hidden items-center gap-1 rounded-full border border-border/70 bg-paper/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:inline-flex"
+            className="ml-1 hidden items-center gap-1 rounded-full border border-border/70 bg-paper/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:inline-flex"
           >
             <Brush className="h-3 w-3 text-seal" /> 100% client-side
           </span>
@@ -42,3 +51,4 @@ export function Header() {
     </header>
   );
 }
+

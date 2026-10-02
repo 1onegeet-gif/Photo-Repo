@@ -219,6 +219,19 @@ export function ControlPanel() {
             onCheckedChange={(v) => s.setAdjust({ invert: v })}
           />
         </div>
+        <div className="flex items-center justify-between rounded-md border border-border/60 bg-paper/40 px-3 py-2">
+          <div className="flex flex-col">
+            <Label htmlFor="dither" className="text-xs text-foreground/80">
+              Dither
+            </Label>
+            <span className="text-[10px] text-muted-foreground">Bayer ordered — retro grain</span>
+          </div>
+          <Switch
+            id="dither"
+            checked={s.dither}
+            onCheckedChange={(v) => s.setDither(v)}
+          />
+        </div>
       </PanelSection>
 
       <PanelSection

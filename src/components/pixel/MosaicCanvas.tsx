@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils";
 interface MosaicCanvasProps {
   sourceRef: React.RefObject<HTMLCanvasElement | null>;
   displayRef: React.RefObject<HTMLCanvasElement | null>;
+  onStats?: (stats: { cells: number; renderMs: number; palette: string[] }) => void;
 }
 
-export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
+export function MosaicCanvas({ sourceRef, displayRef, onStats }: MosaicCanvasProps) {
   const state = useMosaic();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [cells, setCells] = useState<Cell[]>([]);
@@ -45,6 +46,7 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
     }
 
     setBusy(true);
+    const t0 = performance.now();
     // Run pixelation
     const { cells: newCells, bg } = pixelate({
       source: sctx,
@@ -59,6 +61,10 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
       focal: state.focal,
       jitter: state.jitter,
       rand: makeRng(state.seed),
+      palette: state.palette?.colors ?? null,
+      dither: state.dither,
+      shapeMix: state.shapeMix,
+      shapeMixShapes: state.shapeMixShapes,
     });
 
     let bgRGB: [number, number, number] | null = null;
@@ -79,9 +85,28 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
       w,
       h,
     );
+    const renderMs = performance.now() - t0;
     setCells(newCells);
     setBusy(false);
-  }, [displayRef, sourceRef, state]);
+
+    // Emit stats
+    if (onStats) {
+      const paletteSet = new Set<string>();
+      for (const c of newCells) {
+        paletteSet.add(
+          `#${[c.color[0], c.color[1], c.color[2]]
+            .map((v) => (v | 0).toString(16).padStart(2, "0"))
+            .join("")}`,
+        );
+        if (paletteSet.size > 64) break;
+      }
+      onStats({
+        cells: newCells.length,
+        renderMs,
+        palette: Array.from(paletteSet),
+      });
+    }
+  }, [displayRef, sourceRef, state, onStats]);
 
   useMosaicEngine(rerender);
 
@@ -166,6 +191,24 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
               <span className="text-seal">variable density</span>
             </>
           )}
+          {state.palette && (
+            <>
+              <span className="text-border">·</span>
+              <span className="text-matcha">locked palette · {state.palette.colors.length}</span>
+            </>
+          )}
+          {state.dither && (
+            <>
+              <span className="text-border">·</span>
+              <span className="text-matcha">dither</span>
+            </>
+          )}
+          {state.shapeMix !== "single" && (
+            <>
+              <span className="text-border">·</span>
+              <span className="text-matcha">mix · {state.shapeMix}</span>
+            </>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -183,11 +226,18 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
         className={cn(
           "relative flex flex-1 items-center justify-center overflow-hidden rounded-lg",
           "matte-card washi-texture p-4",
+          busy && "ink-loader",
         )}
-        style={{ minHeight: 320 }}
+        style={{ minHeight: 360 }}
         onPointerMove={state.focal.enabled ? onFocalPointer : undefined}
         onPointerDown={state.focal.enabled ? onFocalPointer : undefined}
       >
+        {/* Seigaiha wave corner ornaments */}
+        <span className="seigaiha-corner tl" aria-hidden />
+        <span className="seigaiha-corner tr" aria-hidden />
+        <span className="seigaiha-corner bl" aria-hidden />
+        <span className="seigaiha-corner br" aria-hidden />
+
         {state.hasImage ? (
           <div
             className="relative"
@@ -210,6 +260,10 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
                   "inset 0 0 24px -8px oklch(0.4 0.04 50 / 0.18), inset 0 0 0 1px oklch(0.5 0.04 40 / 0.08)",
               }}
             />
+            {/* Vertical kanji watermark */}
+            <span className="kanji-watermark" aria-hidden>墨絵工房</span>
+            {/* Hanko seal stamp */}
+            <span className="hanko" aria-hidden title="Mosaic Atelier seal">墨</span>
             {state.focal.enabled && (
               <FocalHandle
                 x={state.focal.x}
@@ -219,7 +273,7 @@ export function MosaicCanvas({ sourceRef, displayRef }: MosaicCanvasProps) {
               />
             )}
             {busy && (
-              <div className="pointer-events-none absolute right-2 top-2 rounded bg-paper/80 px-2 py-0.5 text-[10px] text-muted-foreground">
+              <div className="pointer-events-none absolute right-2 top-2 rounded bg-paper/85 px-2 py-0.5 text-[10px] text-muted-foreground">
                 rendering…
               </div>
             )}
@@ -272,17 +326,22 @@ function FocalHandle({
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <div className="rounded-full bg-muted/50 p-3">
-        <ImageOff className="h-6 w-6 text-muted-foreground" />
+    <div className="flex flex-col items-center gap-4 py-12 text-center">
+      <div className="relative flex items-center justify-center">
+        <div className="enso" aria-hidden />
+        <ImageOff className="absolute h-5 w-5 text-muted-foreground/70" />
       </div>
       <div>
-        <p className="font-display text-sm text-foreground/80">
-          No image chosen yet
+        <p className="font-display text-base text-foreground/80">
+          The canvas awaits
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 max-w-xs text-xs text-muted-foreground">
           Drop a file, paste from clipboard, or pick a sample above.
+          Everything stays in your browser.
         </p>
+      </div>
+      <div className="washi-tape tape-susutake mt-1 text-[10px] uppercase tracking-[0.25em] text-ink/70">
+        空白 · blank
       </div>
     </div>
   );

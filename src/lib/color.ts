@@ -127,3 +127,113 @@ export function averageColor(data: Uint8ClampedArray): RGB {
   if (n === 0) return [255, 255, 255];
   return [r / n, g / n, b / n];
 }
+
+// ---- Locked palette support ----
+/** Find the nearest color in a palette to `c` (squared euclidean). */
+export function nearestInPalette(c: RGB, palette: RGB[]): RGB {
+  let best = palette[0];
+  let bestD = Infinity;
+  for (const p of palette) {
+    const dr = c[0] - p[0];
+    const dg = c[1] - p[1];
+    const db = c[2] - p[2];
+    const d = dr * dr + dg * dg + db * db;
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+/**
+ * Extract a dominant palette from image data using median-cut.
+ * Returns up to `k` colors (k clamped to 2..16).
+ * Sampled with a stride for speed on big images.
+ */
+export function extractPalette(
+  data: Uint8ClampedArray,
+  k = 8,
+  maxSamples = 20000,
+): RGB[] {
+  const n = Math.max(2, Math.min(16, k));
+  // Collect samples
+  const pixels: RGB[] = [];
+  const total = data.length / 4;
+  const stride = Math.max(1, Math.floor(total / maxSamples));
+  for (let i = 0; i < data.length; i += 4 * stride) {
+    // Skip fully transparent pixels
+    if (data[i + 3] < 8) continue;
+    pixels.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  if (pixels.length === 0) return [[128, 128, 128]];
+
+  // Median cut
+  type Box = { pixels: RGB[] };
+  const boxes: Box[] = [{ pixels }];
+  while (boxes.length < n) {
+    // Find the box with the largest channel range
+    let targetIdx = -1;
+    let targetRange = -1;
+    let targetChannel = 0;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i];
+      if (b.pixels.length < 2) continue;
+      const ranges = [0, 0, 0];
+      for (let ch = 0; ch < 3; ch++) {
+        let mn = Infinity, mx = -Infinity;
+        for (const p of b.pixels) {
+          if (p[ch] < mn) mn = p[ch];
+          if (p[ch] > mx) mx = p[ch];
+        }
+        ranges[ch] = mx - mn;
+      }
+      const r = Math.max(ranges[0], ranges[1], ranges[2]);
+      if (r > targetRange) {
+        targetRange = r;
+        targetIdx = i;
+        targetChannel = ranges.indexOf(r);
+      }
+    }
+    if (targetIdx === -1) break; // can't split further
+    const box = boxes[targetIdx];
+    box.pixels.sort((a, b) => a[targetChannel] - b[targetChannel]);
+    const mid = Math.floor(box.pixels.length / 2);
+    const a = box.pixels.slice(0, mid);
+    const b = box.pixels.slice(mid);
+    boxes.splice(targetIdx, 1, { pixels: a }, { pixels: b });
+  }
+
+  // Average each box
+  const palette: RGB[] = [];
+  for (const box of boxes) {
+    if (box.pixels.length === 0) continue;
+    let r = 0, g = 0, b = 0;
+    for (const p of box.pixels) {
+      r += p[0]; g += p[1]; b += p[2];
+    }
+    palette.push([
+      Math.round(r / box.pixels.length),
+      Math.round(g / box.pixels.length),
+      Math.round(b / box.pixels.length),
+    ]);
+  }
+  return palette;
+}
+
+/** Parse a comma/newline/space-separated list of hex colors. */
+export function parseHexList(input: string): RGB[] {
+  return input
+    .split(/[\s,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => {
+      try {
+        return hexToRgb(t);
+      } catch {
+        return null;
+      }
+    })
+    .filter((x): x is RGB => x !== null);
+}
+

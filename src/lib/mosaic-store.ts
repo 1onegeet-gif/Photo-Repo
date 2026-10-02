@@ -3,35 +3,52 @@
 import { create } from "zustand";
 import type { ShapeKind } from "@/lib/shapes";
 import type { ColorAdjust } from "@/lib/color";
-import { DEFAULT_ADJUST } from "@/lib/color";
+import { DEFAULT_ADJUST, RGB } from "@/lib/color";
 import { DEFAULT_FOCAL, FocalConfig } from "@/lib/pixelate";
 
 export type BgMode = "transparent" | "paper" | "ink" | "auto" | "custom";
 
-export interface MosaicState {
+/** A shape-mix rule: choose shape based on luminance band. */
+export type ShapeMixMode = "single" | "luminance" | "random";
+
+/** A locked palette — when non-null, cells snap to nearest palette color. */
+export interface LockedPalette {
+  colors: RGB[];     // length 2..32
+  source: "image" | "custom" | "preset";
+  name?: string;
+}
+
+/** Snapshot of all renderable params — used for undo/redo. */
+export interface ParamSnapshot {
+  cellSize: number;
+  shapeSize: number;
+  shape: ShapeKind;
+  rotation: number;
+  jitter: number;
+  seed: number;
+  adjust: ColorAdjust;
+  quantizeLevels: number;
+  focal: FocalConfig;
+  bgMode: BgMode;
+  customBg: [number, number, number];
+  shapeMix: ShapeMixMode;
+  shapeMixShapes: ShapeKind[];
+  palette: LockedPalette | null;
+  dither: boolean;
+}
+
+export interface MosaicState extends ParamSnapshot {
   // Source image
   hasImage: boolean;
   sourceWidth: number;
   sourceHeight: number;
   fileName: string;
-  // Pixel
-  cellSize: number;        // 4..80
-  shapeSize: number;       // 0.05..1 (fraction)
-  shape: ShapeKind;
-  rotation: number;        // -180..180
-  jitter: number;          // 0..1
-  seed: number;            // PRNG seed
-  // Color
-  adjust: ColorAdjust;
-  quantizeLevels: number;  // 2..256
-  // Variable density
-  focal: FocalConfig;
-  // Background
-  bgMode: BgMode;
-  customBg: [number, number, number]; // RGB
   // UI
   showOriginal: boolean;
   showFocal: boolean;
+  // History
+  past: ParamSnapshot[];
+  future: ParamSnapshot[];
 
   // Actions
   setHasImage: (v: boolean, w: number, h: number, name: string) => void;
@@ -50,13 +67,19 @@ export interface MosaicState {
   setShowOriginal: (v: boolean) => void;
   resetAdjust: () => void;
   randomize: () => void;
+  // New
+  setShapeMix: (m: ShapeMixMode) => void;
+  setShapeMixShapes: (shapes: ShapeKind[]) => void;
+  setPalette: (p: LockedPalette | null) => void;
+  setDither: (v: boolean) => void;
+  applyPreset: (p: Partial<ParamSnapshot>) => void;
+  undo: () => void;
+  redo: () => void;
+  /** Replace params WITHOUT pushing history (for preset/undo/redo themselves). */
+  replaceParams: (p: Partial<ParamSnapshot>, opts?: { silent?: boolean }) => void;
 }
 
-export const useMosaic = create<MosaicState>((set) => ({
-  hasImage: false,
-  sourceWidth: 0,
-  sourceHeight: 0,
-  fileName: "",
+const INITIAL: ParamSnapshot = {
   cellSize: 14,
   shapeSize: 1,
   shape: "square",
@@ -68,31 +91,171 @@ export const useMosaic = create<MosaicState>((set) => ({
   focal: { ...DEFAULT_FOCAL },
   bgMode: "paper",
   customBg: [245, 238, 220],
+  shapeMix: "single",
+  shapeMixShapes: ["square"],
+  palette: null,
+  dither: false,
+};
+
+/** Snapshot only the renderable params (not history/UI). */
+function snapshot(s: MosaicState): ParamSnapshot {
+  return {
+    cellSize: s.cellSize,
+    shapeSize: s.shapeSize,
+    shape: s.shape,
+    rotation: s.rotation,
+    jitter: s.jitter,
+    seed: s.seed,
+    adjust: { ...s.adjust },
+    quantizeLevels: s.quantizeLevels,
+    focal: { ...s.focal },
+    bgMode: s.bgMode,
+    customBg: [...s.customBg] as [number, number, number],
+    shapeMix: s.shapeMix,
+    shapeMixShapes: [...s.shapeMixShapes],
+    palette: s.palette ? { ...s.palette, colors: [...s.palette.colors] } : null,
+    dither: s.dither,
+  };
+}
+
+/** Push current params to history (called before any param mutation). */
+function withHistory(set: (fn: (s: MosaicState) => Partial<MosaicState>) => void) {
+  set((s) => ({
+    past: [...s.past, snapshot(s)].slice(-50), // cap at 50
+    future: [],
+  }));
+}
+
+export const useMosaic = create<MosaicState>((set, get) => ({
+  ...INITIAL,
+  hasImage: false,
+  sourceWidth: 0,
+  sourceHeight: 0,
+  fileName: "",
   showOriginal: false,
   showFocal: false,
+  past: [],
+  future: [],
 
   setHasImage: (v, w, h, name) =>
     set({ hasImage: v, sourceWidth: w, sourceHeight: h, fileName: name }),
-  setCellSize: (v) => set({ cellSize: v }),
-  setShapeSize: (v) => set({ shapeSize: v }),
-  setShape: (s) => set({ shape: s }),
-  setRotation: (v) => set({ rotation: v }),
-  setJitter: (v) => set({ jitter: v }),
-  setSeed: (v) => set({ seed: v }),
-  reseed: () => set((s) => ({ seed: (Math.random() * 1e9) | 0 })),
-  setAdjust: (a) => set((s) => ({ adjust: { ...s.adjust, ...a } })),
-  setQuantize: (v) => set({ quantizeLevels: v }),
-  setFocal: (f) => set((s) => ({ focal: { ...s.focal, ...f } })),
-  setBgMode: (b) => set({ bgMode: b }),
-  setCustomBg: (rgb) => set({ customBg: rgb }),
+
+  setCellSize: (v) => {
+    withHistory(set);
+    set({ cellSize: v });
+  },
+  setShapeSize: (v) => {
+    withHistory(set);
+    set({ shapeSize: v });
+  },
+  setShape: (s) => {
+    withHistory(set);
+    set({ shape: s, shapeMix: "single", shapeMixShapes: [s] });
+  },
+  setRotation: (v) => {
+    withHistory(set);
+    set({ rotation: v });
+  },
+  setJitter: (v) => {
+    withHistory(set);
+    set({ jitter: v });
+  },
+  setSeed: (v) => {
+    withHistory(set);
+    set({ seed: v });
+  },
+  reseed: () => {
+    withHistory(set);
+    set({ seed: (Math.random() * 1e9) | 0 });
+  },
+  setAdjust: (a) => {
+    withHistory(set);
+    set((s) => ({ adjust: { ...s.adjust, ...a } }));
+  },
+  setQuantize: (v) => {
+    withHistory(set);
+    set({ quantizeLevels: v });
+  },
+  setFocal: (f) => {
+    withHistory(set);
+    set((s) => ({ focal: { ...s.focal, ...f } }));
+  },
+  setBgMode: (b) => {
+    withHistory(set);
+    set({ bgMode: b });
+  },
+  setCustomBg: (rgb) => {
+    withHistory(set);
+    set({ customBg: rgb });
+  },
   setShowOriginal: (v) => set({ showOriginal: v }),
-  resetAdjust: () => set({ adjust: { ...DEFAULT_ADJUST } }),
-  randomize: () =>
+  resetAdjust: () => {
+    withHistory(set);
+    set({ adjust: { ...DEFAULT_ADJUST } });
+  },
+  randomize: () => {
+    withHistory(set);
     set((s) => ({
       cellSize: 4 + Math.floor(Math.random() * 30),
       shapeSize: 0.4 + Math.random() * 0.6,
       rotation: Math.random() < 0.3 ? Math.floor(Math.random() * 90 - 45) : 0,
       jitter: Math.random() < 0.5 ? 0 : Math.random() * 0.4,
       seed: (Math.random() * 1e9) | 0,
-    })),
+      shapeMix: s.shapeMix,
+      shapeMixShapes: s.shapeMixShapes,
+    }));
+  },
+
+  // New actions
+  setShapeMix: (m) => {
+    withHistory(set);
+    set((s) => ({
+      shapeMix: m,
+      shapeMixShapes:
+        s.shapeMixShapes.length === 0 ? [s.shape] : s.shapeMixShapes,
+    }));
+  },
+  setShapeMixShapes: (shapes) => {
+    withHistory(set);
+    set({ shapeMixShapes: shapes, shapeMix: shapes.length > 1 ? "luminance" : "single" });
+  },
+  setPalette: (p) => {
+    withHistory(set);
+    set({ palette: p });
+  },
+  setDither: (v) => {
+    withHistory(set);
+    set({ dither: v });
+  },
+
+  applyPreset: (p) => {
+    withHistory(set);
+    set({ ...p });
+  },
+
+  replaceParams: (p, opts) => {
+    if (!opts?.silent) withHistory(set);
+    set({ ...p });
+  },
+
+  undo: () => {
+    const s = get();
+    if (s.past.length === 0) return;
+    const prev = s.past[s.past.length - 1];
+    set({
+      ...prev,
+      past: s.past.slice(0, -1),
+      future: [snapshot(s), ...s.future].slice(0, 50),
+    });
+  },
+  redo: () => {
+    const s = get();
+    if (s.future.length === 0) return;
+    const next = s.future[0];
+    set({
+      ...next,
+      past: [...s.past, snapshot(s)].slice(-50),
+      future: s.future.slice(1),
+    });
+  },
 }));

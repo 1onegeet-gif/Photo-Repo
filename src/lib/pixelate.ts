@@ -11,6 +11,7 @@ import {
   clamp,
   DEFAULT_ADJUST,
   quantize,
+  nearestInPalette,
   ColorAdjust,
 } from "./color";
 
@@ -36,7 +37,7 @@ export interface PixelateOptions {
   shapeSize: number;
   shape: ShapeKind;
   adjust: ColorAdjust;
-  /** Color depth: 2..32 */
+  /** Color depth: 2..256 */
   quantizeLevels: number;
   /** Rotate each shape by this many degrees */
   rotation: number;
@@ -45,6 +46,13 @@ export interface PixelateOptions {
   jitter: number;
   /** Seedable pseudo-random — defaults to Math.random */
   rand?: () => number;
+  /** When non-null, every cell color snaps to nearest palette color. */
+  palette?: RGB[] | null;
+  /** Apply Bayer ordered dithering before quantization (retro feel). */
+  dither?: boolean;
+  /** When "luminance" or "random", pick shape per-cell from `shapeMixShapes`. */
+  shapeMix?: "single" | "luminance" | "random";
+  shapeMixShapes?: ShapeKind[];
 }
 
 export interface Cell {
@@ -53,6 +61,8 @@ export interface Cell {
   w: number;
   h: number;
   color: RGB;
+  /** Per-cell shape (resolved by mix mode). */
+  shape: ShapeKind;
 }
 
 export const DEFAULT_FOCAL: FocalConfig = {
@@ -137,6 +147,29 @@ export interface PixelateResult {
   bg: RGB;
 }
 
+/** 4×4 Bayer ordered dithering matrix (values 0..15). */
+const BAYER_4X4 = [
+  0, 8, 2, 10,
+  12, 4, 14, 6,
+  3, 11, 1, 9,
+  15, 7, 13, 5,
+];
+
+/** Pick a shape for a cell based on the mix mode. */
+function resolveShape(
+  mix: "single" | "luminance" | "random",
+  shapes: ShapeKind[],
+  fallback: ShapeKind,
+  lum: number,
+  rand: () => number,
+): ShapeKind {
+  if (mix === "single" || shapes.length === 0) return fallback;
+  if (mix === "random") return shapes[Math.floor(rand() * shapes.length)];
+  // luminance: split [0,1] into len(shapes) bands, dark→light
+  const idx = Math.min(shapes.length - 1, Math.floor(lum * shapes.length));
+  return shapes[idx];
+}
+
 export function pixelate(opts: PixelateOptions): PixelateResult {
   const {
     source,
@@ -151,6 +184,10 @@ export function pixelate(opts: PixelateOptions): PixelateResult {
     focal,
     jitter,
     rand = Math.random,
+    palette = null,
+    dither = false,
+    shapeMix = "single",
+    shapeMixShapes = [shape],
   } = opts;
 
   const sourceData = source.getImageData(0, 0, width, height);
@@ -169,8 +206,33 @@ export function pixelate(opts: PixelateOptions): PixelateResult {
       const cw = cellSizeAt(nx, ny, cellSize, focal);
       const color = sampleRegion(data, sw, sh, x, y, cw, ch);
       const adj = applyAdjust(color, adjust);
-      const quant = quantize(adj, quantizeLevels);
-      cells.push({ x, y, w: cw, h: ch, color: quant });
+
+      // Optional Bayer dithering — nudge the color before quantizing.
+      let work = adj;
+      if (dither) {
+        const bx = Math.floor(x) & 3;
+        const by = Math.floor(y) & 3;
+        const t = (BAYER_4X4[by * 4 + bx] - 7.5) / 16; // -0.5..+0.5
+        const amp = 32; // dither strength
+        work = [
+          clamp(adj[0] + t * amp),
+          clamp(adj[1] + t * amp),
+          clamp(adj[2] + t * amp),
+        ];
+      }
+
+      let quant: RGB;
+      if (palette && palette.length > 0) {
+        quant = nearestInPalette(work, palette);
+      } else {
+        quant = quantize(work, quantizeLevels);
+      }
+
+      const lum =
+        (quant[0] * 0.3 + quant[1] * 0.59 + quant[2] * 0.11) / 255;
+      const cellShape = resolveShape(shapeMix, shapeMixShapes, shape, lum, rand);
+
+      cells.push({ x, y, w: cw, h: ch, color: quant, shape: cellShape });
       x += cw;
     }
     y += ch;
@@ -180,7 +242,7 @@ export function pixelate(opts: PixelateOptions): PixelateResult {
   return { cells, bg: applyAdjust(bg, adjust) };
 }
 
-/** Render cells into a target 2D context using the chosen shape. */
+/** Render cells into a target 2D context. Each cell carries its own shape. */
 export function renderCells(
   ctx: CanvasRenderingContext2D,
   cells: Cell[],
@@ -207,9 +269,10 @@ export function renderCells(
     const j = jitter * (rand() - 0.5) * s * 0.3;
     const jr = jitter * (rand() - 0.5) * 40;
     const css = `rgb(${cell.color[0] | 0},${cell.color[1] | 0},${cell.color[2] | 0})`;
+    const useShape = cell.shape ?? shape;
     drawShape(
       ctx,
-      shape,
+      useShape,
       cell.x + (rand() - 0.5) * j,
       cell.y + (rand() - 0.5) * j,
       s,

@@ -153,6 +153,7 @@ export function exportJson(meta: ExportMeta, name = "mosaic.json") {
       y: +c.y.toFixed(2),
       w: +c.w.toFixed(2),
       h: +c.h.toFixed(2),
+      shape: c.shape,
       r: Math.round(c.color[0]),
       g: Math.round(c.color[1]),
       b: Math.round(c.color[2]),
